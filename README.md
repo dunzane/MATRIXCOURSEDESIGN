@@ -18,7 +18,7 @@
 1. 从 GitHub 拉取代码并进入项目目录：
 
 ```bash
-git clone https://github.com/dunzane/MATRIXCOURSEDESIGN.git
+git clone git@github.com:dunzane/MATRIXCOURSEDESIGN.git
 cd MATRIXCOURSEDESIGN
 ```
 
