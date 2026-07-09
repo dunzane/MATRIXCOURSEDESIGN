@@ -108,6 +108,7 @@ st.markdown("""
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 DEVICE_LABEL = torch.cuda.get_device_name(0) if device.type == "cuda" else "CPU"
 CUDA_LABEL = torch.version.cuda if device.type == "cuda" and torch.version.cuda else "不可用"
+MAX_INFERENCE_SIZE = 640
 PARSING_CKPT = "faceparsing/79999_iter.pth"
 STYLE_MAP = {
     "风格1:新海诚风": "animegan/weights/face_paint_512_v1.pt",
@@ -117,6 +118,9 @@ STYLE_MAP = {
 }
 
 APP_PASSWORD = "xdugaodai"
+
+if device.type == "cpu":
+    torch.set_num_threads(1)
 
 def require_password():
     if st.session_state.get("authenticated"):
@@ -272,6 +276,7 @@ with st.sidebar:
     
     st.markdown("---")
     uploaded_file = st.file_uploader("📂 上传图片 (推荐使用肖像照)", type=["jpg", "png", "jpeg"])
+    run_analysis = st.button("开始计算 / 更新结果", type="primary", use_container_width=True)
 
 # ==========================================
 # 5. 主界面逻辑 (Main Area)
@@ -327,8 +332,8 @@ elif os.path.exists(DEFAULT_IMAGE_PATH):
     image = Image.open(DEFAULT_IMAGE_PATH).convert("RGB")
     st.sidebar.caption("ℹ️ 当前正在展示默认示例图片")
 
-if image is not None:
-    image.thumbnail((1024, 1024))
+if image is not None and run_analysis:
+    image.thumbnail((MAX_INFERENCE_SIZE, MAX_INFERENCE_SIZE))
     
     with st.spinner("正在加载计算图与权重..."):
         parser_net, anime_net = load_resources(style_opt)
@@ -416,7 +421,7 @@ if image is not None:
         
         # 5. GAN 推理 (使用纯净的 clean_edited)
         input_gan = clean_edited * 2 - 1
-        with torch.no_grad():
+        with torch.inference_mode():
             out_gan = anime_net(input_gan, align_corners=False)
             out_gan = out_gan.squeeze(0).clip(-1, 1) * 0.5 + 0.5
             vis_anime_pil = to_pil_image(out_gan)
@@ -524,7 +529,9 @@ if image is not None:
                     m2.metric("Variance", f"{val_data.var():.3f}")
                     m3.metric("Max Shift", f"{val_data.max():.2f}")
                     st.divider()
-                    st.pyplot(create_analysis_plot(d['Processed Mask'], d['Final V'], "v"))
+                    fig = create_analysis_plot(d['Processed Mask'], d['Final V'], "v")
+                    st.pyplot(fig)
+                    plt.close(fig)
             else:
                 st.markdown("<div class='inactive-box'>⚠️ Hair Matrix Inactive</div>", unsafe_allow_html=True)
 
@@ -540,9 +547,16 @@ if image is not None:
                     m2.metric("Variance", f"{val_data.var():.3f}")
                     m3.metric("Peak Int.", f"{val_data.max():.2f}")
                     st.divider()
-                    st.pyplot(create_analysis_plot(d['Processed Mask'], d['Final S'], "s"))
+                    fig = create_analysis_plot(d['Processed Mask'], d['Final S'], "s")
+                    st.pyplot(fig)
+                    plt.close(fig)
             else:
                 st.markdown("<div class='inactive-box'>⚠️ Face Matrix Inactive</div>", unsafe_allow_html=True)
+
+elif image is not None:
+    image.thumbnail((MAX_INFERENCE_SIZE, MAX_INFERENCE_SIZE))
+    st.info("请在侧边栏调整参数后点击“开始计算 / 更新结果”。为避免 Streamlit Cloud 资源不足，参数变化不会自动触发模型推理。")
+    st.image(image, caption="当前输入预览", use_container_width=True)
 
 else:
     st.info("👈 请从侧边栏上传图片以开始。")
