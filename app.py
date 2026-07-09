@@ -12,16 +12,26 @@ from io import BytesIO
 import math
 
 # ================= 🔧 字体与环境配置 =================
-FONT_PATH = "/home/dengzhao/data/fonts/SimHei/SimHei.ttf"
+FONT_CANDIDATES = [
+    "/home/dengzhao/data/fonts/SimHei/SimHei.ttf",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    "/System/Library/Fonts/PingFang.ttc",
+    "/Library/Fonts/Arial Unicode.ttf",
+]
+font_prop = None
 
 try:
-    if os.path.exists(FONT_PATH):
-        fm.fontManager.addfont(FONT_PATH)
-        font_prop = fm.FontProperties(fname=FONT_PATH)
-        plt.rcParams['font.family'] = font_prop.get_name()
-        plt.rcParams['axes.unicode_minus'] = False 
-    else:
-        print(f"⚠️ 未找到字体文件: {FONT_PATH}")
+    for font_path in FONT_CANDIDATES:
+        if os.path.exists(font_path):
+            fm.fontManager.addfont(font_path)
+            font_prop = fm.FontProperties(fname=font_path)
+            plt.rcParams['font.family'] = font_prop.get_name()
+            break
+    plt.rcParams['axes.unicode_minus'] = False
+    if font_prop is None:
+        print("⚠️ 未找到中文字体，Matplotlib 中文标题可能无法正确显示")
 except Exception as e:
     print(f"⚠️ 字体配置出错: {e}")
 
@@ -454,6 +464,7 @@ if image is not None:
             data_channel = tensor_channel.squeeze().detach().cpu().numpy()
             flat_data = data_channel.flatten()
             flat_data = flat_data[flat_data > 0.05] 
+            title_font = {"fontproperties": font_prop} if font_prop else {}
             
             fig = plt.figure(figsize=(6, 5))
             gs = fig.add_gridspec(2, 2, height_ratios=[1, 0.8], wspace=0.3, hspace=0.35)
@@ -461,7 +472,7 @@ if image is not None:
             # Mask
             ax1 = fig.add_subplot(gs[0, 0])
             im1 = ax1.imshow(data_mask, cmap='magma')
-            ax1.set_title(f"语义掩膜 ($\mathbf{{M}}$)", color='white', fontsize=9)
+            ax1.set_title(f"语义掩膜 ($\mathbf{{M}}$)", color='white', fontsize=9, **title_font)
             ax1.axis('off')
             # Colorbar 1
             cbar1 = plt.colorbar(im1, ax=ax1, fraction=0.046, pad=0.04)
@@ -472,7 +483,7 @@ if image is not None:
             # Channel
             ax2 = fig.add_subplot(gs[0, 1])
             im2 = ax2.imshow(data_channel, cmap='viridis')
-            ax2.set_title(f"通道响应 ($\mathbf{{I}}'_{{{title_prefix}}}$)", color='white', fontsize=9)
+            ax2.set_title(f"通道响应 ($\mathbf{{I}}'_{{{title_prefix}}}$)", color='white', fontsize=9, **title_font)
             ax2.axis('off')
             # Colorbar 2
             cbar2 = plt.colorbar(im2, ax=ax2, fraction=0.046, pad=0.04)
@@ -483,7 +494,7 @@ if image is not None:
             # Hist
             ax3 = fig.add_subplot(gs[1, :])
             sns.histplot(flat_data, bins=40, color='#00AAFF', alpha=0.6, kde=True, element="step", fill=True, ax=ax3, line_kws={'linewidth': 1.5})
-            ax3.set_title("像素数值分布 (Pixel Value Distribution)", color='white', fontsize=9, pad=10)
+            ax3.set_title("像素数值分布 / Pixel Value Distribution", color='white', fontsize=9, pad=10, **title_font)
             ax3.set_facecolor('#0e1117')
             
             ax3.grid(visible=True, which='major', axis='y', color='#444', linestyle='--', linewidth=0.5, alpha=0.5)
