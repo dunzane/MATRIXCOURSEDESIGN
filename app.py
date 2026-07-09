@@ -77,28 +77,22 @@ st.markdown("""
         z-index: 9999;
         pointer-events: none;
         opacity: 0.12;
-        background-image: repeating-linear-gradient(
-            -28deg,
-            transparent 0,
-            transparent 140px,
-            rgba(255, 255, 255, 0.01) 140px,
-            rgba(255, 255, 255, 0.01) 280px
-        );
+        overflow: hidden;
     }
     .course-watermark::before {
-        content: "西电高代课程组";
+        content: "西电高代课程组  西电高代课程组  西电高代课程组\A 西电高代课程组  西电高代课程组  西电高代课程组\A 西电高代课程组  西电高代课程组  西电高代课程组\A 西电高代课程组  西电高代课程组  西电高代课程组\A 西电高代课程组  西电高代课程组  西电高代课程组";
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%) rotate(-28deg);
         width: 150vw;
         color: rgba(255, 255, 255, 0.42);
-        font-size: 3.6rem;
+        font-size: 2.2rem;
         font-weight: 800;
         letter-spacing: 0;
         text-align: center;
         white-space: pre-wrap;
-        line-height: 2.4;
+        line-height: 2.1;
     }
 </style>
 <div class="course-watermark"></div>
@@ -197,7 +191,7 @@ with st.sidebar:
         <h3 style="margin-top:0; color:#00AAFF">🎓 课程设计项目</h3>
         <p style="color:#00AAFF"><b>课程名称:</b> 矩阵分析与计算（X2MS1012） </p>
         <p style="color:#00AAFF"><b>指导老师:</b> 尹小艳 </p>
-        <p style="color:#00AAFF"><b>论文题目:</b> 《基于高斯分布矩阵与色彩空间线性变换的语义可控动漫生成》 </p>
+        <p style="color:#00AAFF"><b>课程题目:</b> 《基于高斯分布矩阵与色彩空间线性变换的语义可控动漫生成》 </p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -584,6 +578,9 @@ st.markdown("""
         <span style="color: #FFF;"> 路冰 </span> &nbsp;•&nbsp; 
         <span style="color: #FFF;"> 陈丽汀 </span> &nbsp;•&nbsp; 
         <span style="color: #FFF;"> 彭佳园 </span>
+    </p>
+    <p style="font-size: 0.95em; color: #BBBBBB; margin-bottom: 0;">
+        <b>联系人:</b> <span style="color: #FFF;">dengzhaowork@gmail.com</span>
     </p>
 </div>
 """, unsafe_allow_html=True)
