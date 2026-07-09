@@ -537,9 +537,9 @@ if image is not None and run_analysis:
 elif image is not None:
     image.thumbnail((MAX_INFERENCE_SIZE, MAX_INFERENCE_SIZE))
     st.info("当前显示的是预览图片。可以在侧边栏上传自己的图片，调整参数后点击“开始计算 / 更新结果”。")
-    preview_left, preview_center, preview_right = st.columns([1, 1.15, 1])
+    preview_left, preview_center, preview_right = st.columns([1.35, 0.9, 1.35])
     with preview_center:
-        st.image(image, caption="当前输入预览", use_container_width=True)
+        st.image(image, caption="当前输入预览", width=360)
 
 else:
     st.info("👈 请从侧边栏上传图片以开始。")
