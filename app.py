@@ -52,7 +52,14 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    .main .block-container { padding-top: 2rem; max-width: 95%; }
+    .main .block-container {
+        padding-top: 0.5rem;
+        max-width: 95%;
+    }
+    h1 {
+        margin-top: 0;
+        margin-bottom: 0.25rem;
+    }
     .info-box { padding: 15px; background-color: #1E1E1E; border-radius: 10px; border-left: 5px solid #00AAFF; margin-bottom: 20px; }
     div[data-testid="stVerticalBlockBorderWrapper"] { border: 1px solid #333; background-color: #161920; border-radius: 8px; padding: 15px; }
     .inactive-box { height: 300px; border: 2px dashed #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #555; background-color: #0E1117; }
