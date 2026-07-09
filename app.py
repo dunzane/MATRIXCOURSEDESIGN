@@ -53,12 +53,29 @@ st.set_page_config(
 st.markdown("""
 <style>
     .main .block-container {
-        padding-top: 0.5rem;
+        padding-top: 0 !important;
+        padding-bottom: 1rem;
         max-width: 95%;
     }
+    [data-testid="stAppViewContainer"] > .main {
+        padding-top: 0 !important;
+    }
+    [data-testid="stHeader"] {
+        height: 0;
+        min-height: 0;
+        background: transparent;
+    }
+    [data-testid="stToolbar"] {
+        display: none;
+    }
     h1 {
-        margin-top: 0;
-        margin-bottom: 0.25rem;
+        padding-top: 0 !important;
+        margin-top: -0.35rem !important;
+        margin-bottom: 0 !important;
+        line-height: 1.12;
+    }
+    h1 + div {
+        margin-top: 0 !important;
     }
     .info-box { padding: 15px; background-color: #1E1E1E; border-radius: 10px; border-left: 5px solid #00AAFF; margin-bottom: 20px; }
     div[data-testid="stVerticalBlockBorderWrapper"] { border: 1px solid #333; background-color: #161920; border-radius: 8px; padding: 15px; }
