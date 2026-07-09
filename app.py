@@ -76,23 +76,10 @@ st.markdown("""
         inset: 0;
         z-index: 9999;
         pointer-events: none;
-        opacity: 0.12;
-        overflow: hidden;
-    }
-    .course-watermark::before {
-        content: "西电高代课程组  西电高代课程组  西电高代课程组\A 西电高代课程组  西电高代课程组  西电高代课程组\A 西电高代课程组  西电高代课程组  西电高代课程组\A 西电高代课程组  西电高代课程组  西电高代课程组\A 西电高代课程组  西电高代课程组  西电高代课程组";
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) rotate(-28deg);
-        width: 150vw;
-        color: rgba(255, 255, 255, 0.42);
-        font-size: 2.2rem;
-        font-weight: 800;
-        letter-spacing: 0;
-        text-align: center;
-        white-space: pre-wrap;
-        line-height: 2.1;
+        opacity: 0.16;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='220' viewBox='0 0 360 220'%3E%3Cg transform='translate(180 110) rotate(-28)'%3E%3Ctext x='0' y='0' text-anchor='middle' font-size='28' font-weight='800' fill='rgba(255,255,255,0.42)' font-family='Arial, sans-serif'%3E%E8%A5%BF%E7%94%B5%E9%AB%98%E4%BB%A3%E8%AF%BE%E7%A8%8B%E7%BB%84%3C/text%3E%3C/g%3E%3C/svg%3E");
+        background-size: 360px 220px;
+        background-position: 0 0, 180px 110px;
     }
 </style>
 <div class="course-watermark"></div>
@@ -549,8 +536,10 @@ if image is not None and run_analysis:
 
 elif image is not None:
     image.thumbnail((MAX_INFERENCE_SIZE, MAX_INFERENCE_SIZE))
-    st.info("请在侧边栏调整参数后点击“开始计算 / 更新结果”。为避免 Streamlit Cloud 资源不足，参数变化不会自动触发模型推理。")
-    st.image(image, caption="当前输入预览", use_container_width=True)
+    st.info("当前显示的是预览图片。可以在侧边栏上传自己的图片，调整参数后点击“开始计算 / 更新结果”。")
+    preview_left, preview_center, preview_right = st.columns([1, 1.15, 1])
+    with preview_center:
+        st.image(image, caption="当前输入预览", use_container_width=True)
 
 else:
     st.info("👈 请从侧边栏上传图片以开始。")
