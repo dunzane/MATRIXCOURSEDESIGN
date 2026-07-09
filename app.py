@@ -61,11 +61,43 @@ st.markdown("""
     .streamlit-expanderHeader p {
         font-weight: 900 !important;
     }
+    .course-watermark {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        pointer-events: none;
+        opacity: 0.12;
+        background-image: repeating-linear-gradient(
+            -28deg,
+            transparent 0,
+            transparent 140px,
+            rgba(255, 255, 255, 0.01) 140px,
+            rgba(255, 255, 255, 0.01) 280px
+        );
+    }
+    .course-watermark::before {
+        content: "西电高代课程组";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-28deg);
+        width: 150vw;
+        color: rgba(255, 255, 255, 0.42);
+        font-size: 3.6rem;
+        font-weight: 800;
+        letter-spacing: 0;
+        text-align: center;
+        white-space: pre-wrap;
+        line-height: 2.4;
+    }
 </style>
+<div class="course-watermark"></div>
 """, unsafe_allow_html=True)
 
 # 设备与模型路径配置
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE_LABEL = torch.cuda.get_device_name(0) if device.type == "cuda" else "CPU"
+CUDA_LABEL = torch.version.cuda if device.type == "cuda" and torch.version.cuda else "不可用"
 PARSING_CKPT = "faceparsing/79999_iter.pth"
 STYLE_MAP = {
     "风格1:新海诚风": "animegan/weights/face_paint_512_v1.pt",
@@ -73,6 +105,27 @@ STYLE_MAP = {
     "风格3:宫崎骏风": "animegan/weights/celeba_distill.pt",
     "风格4:红辣椒": "animegan/weights/paprika.pt",
 }
+
+APP_PASSWORD = "xdugaodai"
+
+def require_password():
+    if st.session_state.get("authenticated"):
+        return
+
+    st.title("矩阵分析工作台")
+    st.caption("请输入访问密码")
+    password = st.text_input("密码", type="password")
+
+    if password:
+        if password == APP_PASSWORD:
+            st.session_state["authenticated"] = True
+            st.rerun()
+        else:
+            st.error("密码错误，请重新输入。")
+
+    st.stop()
+
+require_password()
 
 # ==========================================
 # 2. 模型加载逻辑
@@ -218,15 +271,14 @@ st.title("🎨 矩阵分析工作台")
 st.caption("基于协方差对齐与张量变形的语义风格迁移系统")
 
 torch_ver = torch.__version__
-cuda_ver = torch.version.cuda if torch.cuda.is_available() else "12.4"
 st.markdown(f"""
     <style>
         .badge {{ padding: 4px 8px; border-radius: 4px; border: 1px solid; background: #1E1E1E; margin-right: 10px; font-family: monospace; font-size: 0.9em; color: #FFF; display: inline-block; margin-bottom: 5px; }}
     </style>
     <div>
-        <span class="badge" style="border-color: #00AAFF;">⚡ <b style="color:#00AAFF">计算设备:</b> RTX 4090 (24G) x3</span>
+        <span class="badge" style="border-color: #00AAFF;">⚡ <b style="color:#00AAFF">计算设备:</b> {DEVICE_LABEL}</span>
         <span class="badge" style="border-color: #FF4B4B;">🔥 <b style="color:#FF4B4B">Torch版本:</b> v{torch_ver}</span>
-        <span class="badge" style="border-color: #00CC00;">🚀 <b style="color:#00CC00">CUDA环境:</b> v{cuda_ver}</span>
+        <span class="badge" style="border-color: #00CC00;">🚀 <b style="color:#00CC00">CUDA环境:</b> {CUDA_LABEL}</span>
     </div>
     """, unsafe_allow_html=True)
 

@@ -49,6 +49,12 @@ streamlit run app.py
 
 打开浏览器，访问本地 Streamlit 页（通常为 `http://localhost:8501`），在侧栏上传图片或使用示例图片，选择风格并调整矩阵/几何参数。
 
+访问密码：
+
+```text
+xdugaodai
+```
+
 ## 使用说明（要点）
 
 - 侧栏选择动漫风格：模型文件通过 `STYLE_MAP` 映射到 `animegan/weights/*.pt`。确保所选权重存在。
@@ -67,8 +73,15 @@ streamlit run app.py
 
 ## 开发与复现说明
 
-- 代码兼容 PyTorch 1.13+（视 CUDA 驱动与显卡而定）。若需 GPU 加速，请安装带 CUDA 的 `torch` 版本（参考官方安装指引）。
-- 若要在无 GPU 的环境中运行，可在 CPU 上运行，但推理速度会显著下降。
+- 代码兼容 PyTorch 1.13+，程序会自动检测 CUDA；无 CUDA 时会使用纯 CPU 推理。
+- 若要在无 GPU 的 Linux 环境中安装 CPU 版 PyTorch，可参考以下命令安装后再运行 `pip install -r requirements.txt` 中的其它依赖：
+
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+```
+
+- 若需 GPU 加速，请安装与 CUDA 驱动匹配的 `torch` / `torchvision` 版本（参考 PyTorch 官方安装指引）。
+- CPU 模式可正常运行，但模型加载与推理速度会显著慢于 GPU。
 - 若需训练新的风格模型或分割模型，建议准备相应的数据集并复用 `animegan/model.py` 与 `faceparsing/` 中的网络结构。
 
 ## 示例命令
@@ -97,4 +110,3 @@ from faceparsing.model import BiSeNet
 ## 贡献与联系方式
 
 若要贡献代码或模型，请提交 Pull Request 或在 Issues 中创建讨论。项目作者：（邮箱 / 联系方式请在课题组内部渠道获取）。
-
