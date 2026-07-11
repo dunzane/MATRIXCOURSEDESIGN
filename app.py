@@ -68,6 +68,15 @@ st.markdown("""
     [data-testid="stToolbar"] {
         display: none;
     }
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewContainer"] > .main {
+        background: #FAF9F5;
+        color: #3D3929;
+    }
+    [data-testid="stSidebar"] > div:first-child {
+        background: #F0EEE6;
+        color: #3D3929;
+    }
     h1 {
         padding-top: 0 !important;
         margin-top: -0.35rem !important;
@@ -77,19 +86,34 @@ st.markdown("""
     h1 + div {
         margin-top: 0 !important;
     }
-    div[data-testid="stVerticalBlockBorderWrapper"] { border: 1px solid #333; background-color: #161920; border-radius: 8px; padding: 15px; }
-    .inactive-box { height: 300px; border: 2px dashed #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #555; background-color: #0E1117; }
-    div[data-testid="stMetricValue"] { font-size: 1.1rem !important; color: #00AAFF; }
-    div[data-testid="stMetricLabel"] { font-size: 0.8rem !important; color: #888; }
+    .info-box {
+        padding: 15px; background: #EFE9DD; color: #3D3929;
+        border: 1px solid #DAD5C8; border-left: 5px solid #C15F3C;
+        border-radius: 8px; margin-bottom: 20px;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] { border: 1px solid #DAD5C8; background-color: #F0EEE6; border-radius: 8px; padding: 15px; }
+    .inactive-box { height: 300px; border: 2px dashed #DAD5C8; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #6B6553; background-color: #F0EEE6; }
+    div[data-testid="stMetricValue"] { font-size: 1.1rem !important; color: #C15F3C; }
+    div[data-testid="stMetricLabel"] { font-size: 0.8rem !important; color: #6B6553; }
     [data-testid="stMetric"] { display: flex; flex-direction: column; align-items: center; text-align: center; }
     [data-testid="stMetricValue"] { justify-content: center; font-weight: bold; }
     [data-testid="stMetricLabel"] { justify-content: center; }
+    div[data-testid="stAlert"] {
+        background: #EFE9DD;
+        color: #3D3929;
+        border: 1px solid #DAD5C8;
+        border-left: 4px solid #C15F3C;
+    }
+    button:hover {
+        border-color: #A84F30 !important;
+        color: #A84F30 !important;
+    }
     
     /* 优化 Expander 的样式 - 强制加粗 */
     .streamlit-expanderHeader {
         font-size: 1.2em; /* 稍微加大 */
         font-weight: 900 !important; /* 最粗 */
-        color: #E0E0E0;
+        color: #3D3929;
     }
     .streamlit-expanderHeader p {
         font-weight: 900 !important;
@@ -99,8 +123,8 @@ st.markdown("""
         inset: 0;
         z-index: 9999;
         pointer-events: none;
-        opacity: 0.16;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='220' viewBox='0 0 360 220'%3E%3Cg transform='translate(180 110) rotate(-28)'%3E%3Ctext x='0' y='0' text-anchor='middle' font-size='28' font-weight='800' fill='rgba(255,255,255,0.42)' font-family='Arial, sans-serif'%3E%E8%A5%BF%E7%94%B5%E9%AB%98%E4%BB%A3%E8%AF%BE%E7%A8%8B%E7%BB%84%3C/text%3E%3C/g%3E%3C/svg%3E");
+        opacity: 1;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='360' height='220' viewBox='0 0 360 220'%3E%3Cg transform='translate(180 110) rotate(-28)'%3E%3Ctext x='0' y='0' text-anchor='middle' font-size='28' font-weight='800' fill='rgba(61,57,41,0.06)' font-family='Arial, sans-serif'%3E%E8%A5%BF%E7%94%B5%E9%AB%98%E4%BB%A3%E8%AF%BE%E7%A8%8B%E7%BB%84%3C/text%3E%3C/g%3E%3C/svg%3E");
         background-size: 360px 220px;
         background-position: 0 0, 180px 110px;
     }
@@ -145,12 +169,10 @@ def require_password():
         [class*="st-key-password_card"] {
             max-width: 400px;
             margin: 0 auto;
-        }
-        [class*="st-key-password_card"] [data-testid="stVerticalBlockBorderWrapper"] {
-            background: #161920;
-            border: 1px solid #333;
+            background: #F0EEE6;
+            border: 1px solid #DAD5C8 !important;
             border-radius: 8px;
-            padding: 2rem;
+            padding: 2rem !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -161,7 +183,7 @@ def require_password():
             st.title("西电高等代数实验室")
             st.caption("矩阵分析工作台 · 请输入访问密码后继续")
             password = st.text_input("密码", type="password", key="password_input")
-            submitted = st.button("进入实验室", type="primary", use_container_width=True)
+            submitted = st.button("进入实验室", key="password_submit", type="primary", use_container_width=True)
 
             if submitted:
                 if password == APP_PASSWORD:
@@ -472,12 +494,12 @@ st.caption("矩阵分析工作台 · 基于协方差对齐与张量变形的语�
 torch_ver = torch.__version__
 st.markdown(f"""
     <style>
-        .badge {{ padding: 4px 8px; border-radius: 4px; border: 1px solid; background: #1E1E1E; margin-right: 10px; font-family: monospace; font-size: 0.9em; color: #FFF; display: inline-block; margin-bottom: 5px; }}
+        .badge {{ padding: 4px 8px; border-radius: 4px; border: 1px solid; background: #F0EEE6; margin-right: 10px; font-family: monospace; font-size: 0.9em; color: #3D3929; display: inline-block; margin-bottom: 5px; }}
     </style>
     <div>
-        <span class="badge" style="border-color: #00AAFF;">⚡ <b style="color:#00AAFF">计算设备:</b> {DEVICE_LABEL}</span>
-        <span class="badge" style="border-color: #FF4B4B;">🔥 <b style="color:#FF4B4B">Torch版本:</b> v{torch_ver}</span>
-        <span class="badge" style="border-color: #00CC00;">🚀 <b style="color:#00CC00">CUDA环境:</b> {CUDA_LABEL}</span>
+        <span class="badge" style="border-color: #C15F3C;">⚡ <b style="color:#C15F3C">计算设备:</b> {DEVICE_LABEL}</span>
+        <span class="badge" style="border-color: #B4443C;">🔥 <b style="color:#B4443C">Torch版本:</b> v{torch_ver}</span>
+        <span class="badge" style="border-color: #5A8A5C;">🚀 <b style="color:#5A8A5C">CUDA环境:</b> {CUDA_LABEL}</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -656,38 +678,42 @@ def create_analysis_plot(tensor_mask, tensor_channel, title_prefix):
     gs = fig.add_gridspec(2, 2, height_ratios=[1, 0.8], wspace=0.3, hspace=0.35)
 
     ax1 = fig.add_subplot(gs[0, 0])
-    im1 = ax1.imshow(data_mask, cmap='magma')
-    ax1.set_title("语义掩膜 ($\\mathbf{M}$)", color='white', fontsize=9, **title_font)
+    ax1.set_facecolor('#FAF9F5')
+    im1 = ax1.imshow(data_mask, cmap='YlOrBr')
+    ax1.set_title("语义掩膜 ($\\mathbf{M}$)", color='#3D3929', fontsize=9, **title_font)
     ax1.axis('off')
     cbar1 = plt.colorbar(im1, ax=ax1, fraction=0.046, pad=0.04)
-    cbar1.ax.yaxis.set_tick_params(color='white')
-    plt.setp(plt.getp(cbar1.ax.axes, 'yticklabels'), color='white', fontsize=8)
+    cbar1.ax.set_facecolor('#FAF9F5')
+    cbar1.ax.yaxis.set_tick_params(color='#3D3929')
+    plt.setp(plt.getp(cbar1.ax.axes, 'yticklabels'), color='#3D3929', fontsize=8)
     cbar1.outline.set_edgecolor('none')
 
     ax2 = fig.add_subplot(gs[0, 1])
-    im2 = ax2.imshow(data_channel, cmap='viridis')
-    ax2.set_title(f"通道响应 ($\\mathbf{{I}}'_{{{title_prefix}}}$)", color='white', fontsize=9, **title_font)
+    ax2.set_facecolor('#FAF9F5')
+    im2 = ax2.imshow(data_channel, cmap='YlOrBr')
+    ax2.set_title(f"通道响应 ($\\mathbf{{I}}'_{{{title_prefix}}}$)", color='#3D3929', fontsize=9, **title_font)
     ax2.axis('off')
     cbar2 = plt.colorbar(im2, ax=ax2, fraction=0.046, pad=0.04)
-    cbar2.ax.yaxis.set_tick_params(color='white')
-    plt.setp(plt.getp(cbar2.ax.axes, 'yticklabels'), color='white', fontsize=8)
+    cbar2.ax.set_facecolor('#FAF9F5')
+    cbar2.ax.yaxis.set_tick_params(color='#3D3929')
+    plt.setp(plt.getp(cbar2.ax.axes, 'yticklabels'), color='#3D3929', fontsize=8)
     cbar2.outline.set_edgecolor('none')
 
     ax3 = fig.add_subplot(gs[1, :])
     if flat_data.size:
-        sns.histplot(flat_data, bins=40, color='#00AAFF', alpha=0.6, kde=True, element="step", fill=True, ax=ax3, line_kws={'linewidth': 1.5})
-    ax3.set_title("像素数值分布 / Pixel Value Distribution", color='white', fontsize=9, pad=10, **title_font)
-    ax3.set_facecolor('#0e1117')
-    ax3.grid(visible=True, which='major', axis='y', color='#444', linestyle='--', linewidth=0.5, alpha=0.5)
-    ax3.tick_params(axis='both', colors='white', labelsize=8)
+        sns.histplot(flat_data, bins=40, color='#C15F3C', alpha=0.6, kde=True, element="step", fill=True, ax=ax3, line_kws={'linewidth': 1.5})
+    ax3.set_title("像素数值分布 / Pixel Value Distribution", color='#3D3929', fontsize=9, pad=10, **title_font)
+    ax3.set_facecolor('#FAF9F5')
+    ax3.grid(visible=True, which='major', axis='y', color='#DAD5C8', linestyle='--', linewidth=0.5, alpha=0.8)
+    ax3.tick_params(axis='both', colors='#3D3929', labelsize=8)
     for label in ax3.get_xticklabels() + ax3.get_yticklabels():
-        label.set_color('white')
-    ax3.xaxis.label.set_color('white')
-    ax3.yaxis.label.set_color('white')
+        label.set_color('#3D3929')
+    ax3.xaxis.label.set_color('#3D3929')
+    ax3.yaxis.label.set_color('#3D3929')
     sns.despine(ax=ax3, left=True, bottom=False)
-    ax3.spines['bottom'].set_color('#FFFFFF')
+    ax3.spines['bottom'].set_color('#3D3929')
     ax3.set_ylabel("")
-    fig.patch.set_facecolor('#161920')
+    fig.patch.set_facecolor('#FAF9F5')
     return fig
 
 
@@ -697,9 +723,9 @@ def render_parameter_summary(params, changed_keys):
         safe_key = html.escape(str(key))
         safe_value = html.escape(str(value))
         if key in changed_keys:
-            rows.append(f"<div style='color:#FFD166'><b>{safe_key}：</b>{safe_value}（已变化）</div>")
+            rows.append(f"<div style='color:#B8860B'><b>{safe_key}：</b>{safe_value}（已变化）</div>")
         else:
-            rows.append(f"<div style='color:#BBBBBB'><b>{safe_key}：</b>{safe_value}</div>")
+            rows.append(f"<div style='color:#6B6553'><b>{safe_key}：</b>{safe_value}</div>")
     st.markdown("".join(rows), unsafe_allow_html=True)
 
 
@@ -708,13 +734,13 @@ if last_run is not None:
     st.markdown("""
         <style>
         .result-card {
-            border: 1px solid #333; border-radius: 8px; padding: 16px; background-color: #161920;
+            border: 1px solid #DAD5C8; border-radius: 8px; padding: 16px; background-color: #F0EEE6;
             height: 400px; display: flex; flex-direction: column; justify-content: space-between;
-            align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.18);
+            align-items: center; box-shadow: 0 4px 6px rgba(61,57,41,0.12);
         }
-        .result-title { text-align: center; font-weight: 600; font-size: 1em; color: #00AAFF; margin-bottom: 10px; }
+        .result-title { text-align: center; font-weight: 600; font-size: 1em; color: #C15F3C; margin-bottom: 10px; }
         .result-card img { max-height: 280px; width: auto; max-width: 100%; object-fit: contain; border-radius: 4px; flex-grow: 1; margin: 5px 0; }
-        .img-caption { text-align: center; font-size: 0.85em; color: #AAAAAA; margin-top: 8px; font-family: monospace; }
+        .img-caption { text-align: center; font-size: 0.85em; color: #6B6553; margin-top: 8px; font-family: monospace; }
         </style>
         """, unsafe_allow_html=True)
 
