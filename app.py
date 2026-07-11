@@ -8,8 +8,8 @@ import os
 import matplotlib.font_manager as fm
 import seaborn as sns
 import base64
+import html
 from io import BytesIO
-import math
 
 # ================= 🔧 字体与环境配置 =================
 FONT_CANDIDATES = [
@@ -44,7 +44,7 @@ from matrix import apply_matrix_color_edit, get_segmentation_mask
 # ==========================================
 
 st.set_page_config(
-    page_title="矩阵分析与应用",
+    page_title="西电高等代数实验室",
     page_icon="🎨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -77,7 +77,6 @@ st.markdown("""
     h1 + div {
         margin-top: 0 !important;
     }
-    .info-box { padding: 15px; background-color: #1E1E1E; border-radius: 10px; border-left: 5px solid #00AAFF; margin-bottom: 20px; }
     div[data-testid="stVerticalBlockBorderWrapper"] { border: 1px solid #333; background-color: #161920; border-radius: 8px; padding: 15px; }
     .inactive-box { height: 300px; border: 2px dashed #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #555; background-color: #0E1117; }
     div[data-testid="stMetricValue"] { font-size: 1.1rem !important; color: #00AAFF; }
@@ -127,12 +126,16 @@ APP_PASSWORD = "xdugaodai"
 if device.type == "cpu":
     torch.set_num_threads(1)
 
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
+
 def require_password():
-    if st.session_state.get("authenticated"):
+    if st.session_state["authenticated"]:
         return
 
-    st.title("矩阵分析工作台")
-    st.caption("请输入访问密码")
+    st.title("西电高等代数实验室")
+    st.caption("矩阵分析工作台 · 请输入访问密码")
     password = st.text_input("密码", type="password")
 
     if password:
@@ -145,6 +148,28 @@ def require_password():
     st.stop()
 
 require_password()
+
+for state_key, default_value in {
+    "selected_example": None,
+    "hair_base_color": "#a3ff00",
+    "last_run": None,
+    "prev_run": None,
+}.items():
+    if state_key not in st.session_state:
+        st.session_state[state_key] = default_value
+
+
+def select_example(path):
+    st.session_state["selected_example"] = path
+
+
+def set_hair_color(color):
+    st.session_state["hair_base_color"] = color
+
+
+def clear_run_history():
+    st.session_state["last_run"] = None
+    st.session_state["prev_run"] = None
 
 # ==========================================
 # 2. 模型加载逻辑
@@ -197,17 +222,37 @@ def draw_grid_on_tensor(tensor, step=80, color=(120, 120, 120)):
 # ==========================================
 
 with st.sidebar:
-    st.markdown("""
-    <div class="info-box">
-        <h3 style="margin-top:0; color:#00AAFF">🎓 课程设计项目</h3>
-        <p style="color:#00AAFF"><b>课程名称:</b> 矩阵分析与计算（X2MS1012） </p>
-        <p style="color:#00AAFF"><b>指导老师:</b> 尹小艳 </p>
-        <p style="color:#00AAFF"><b>课程题目:</b> 《基于高斯分布矩阵与色彩空间线性变换的语义可控动漫生成》 </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
+    uploaded_file = st.file_uploader("📂 上传图片（推荐使用肖像照）", type=["jpg", "png", "jpeg"])
+
+    example_dir = "./example"
+    example_paths = []
+    if os.path.isdir(example_dir):
+        example_paths = sorted(
+            os.path.join(example_dir, name)
+            for name in os.listdir(example_dir)
+            if name.lower().endswith((".jpg", ".jpeg", ".png"))
+        )
+
+    with st.expander("🖼️ 示例图库", expanded=False):
+        if example_paths:
+            for row_start in range(0, len(example_paths), 3):
+                gallery_cols = st.columns(3)
+                for offset, example_path in enumerate(example_paths[row_start:row_start + 3]):
+                    with gallery_cols[offset]:
+                        st.image(example_path, use_container_width=True)
+                        is_selected = st.session_state["selected_example"] == example_path
+                        st.button(
+                            "已选择" if is_selected else "使用此图",
+                            key=f"example_{row_start + offset}",
+                            disabled=is_selected,
+                            on_click=select_example,
+                            args=(example_path,),
+                            use_container_width=True,
+                        )
+        else:
+            st.caption("example 目录中暂无可用图片。")
+
+    st.divider()
     st.header("🎛️ 系统设置")
     style_opt = st.selectbox("选择动漫风格模型", list(STYLE_MAP.keys()))
     
@@ -256,19 +301,40 @@ with st.sidebar:
             # 3. 镜像反射
             st.markdown("**3. 镜像反射 (Reflection)**")
             
-            # 修复：将 help 文案移动到 checkbox
-            reflect_help_text = "模拟镜面反射效果。\n- 水平翻转：绕Y轴翻转，矩阵 x' = -x\n- 垂直翻转：绕X轴翻转，矩阵 y' = -y"
+            reflect_help_text = (
+                "四种反射按界面顺序依次叠加。\n\n"
+                "- x'=-x：矩阵 [[-1, 0], [0, 1]]\n"
+                "- y'=-y：矩阵 [[1, 0], [0, -1]]\n"
+                "- 沿 y=x：矩阵 [[0, 1], [1, 0]]\n"
+                "- 沿 y=-x：矩阵 [[0, -1], [-1, 0]]"
+            )
             
             col_r1, col_r2 = st.columns(2)
-            with col_r1: geom_params['flip_x'] = st.checkbox("水平翻转 (X-Mirror)", False, help=reflect_help_text)
-            with col_r2: geom_params['flip_y'] = st.checkbox("垂直翻转 (Y-Mirror)", False)
+            with col_r1:
+                geom_params['flip_x'] = st.checkbox("x' = -x", False, help=reflect_help_text)
+                geom_params['reflect_y_eq_x'] = st.checkbox("沿 y = x 反射", False)
+            with col_r2:
+                geom_params['flip_y'] = st.checkbox("y' = -y", False)
+                geom_params['reflect_y_eq_neg_x'] = st.checkbox("沿 y = -x 反射", False)
     
     # --- 模块 1: 头发编辑 ---
     edit_hair = st.checkbox("启用：头发矩阵编辑", value=True)
     hair_params = {}
     if edit_hair:
         with st.expander("💇‍♀️ 头发参数调节", expanded=False):
-            hair_params['color'] = st.color_picker("基础色调", "#a3ff00")
+            st.caption("基础色调快捷选择")
+            preset_cols = st.columns(3)
+            presets = [("棕色", "#8B4513"), ("金黄", "#FFD700"), ("黑色", "#2B2B2B")]
+            for preset_col, (label, color) in zip(preset_cols, presets):
+                with preset_col:
+                    st.button(
+                        label,
+                        key=f"hair_preset_{color}",
+                        on_click=set_hair_color,
+                        args=(color,),
+                        use_container_width=True,
+                    )
+            hair_params['color'] = st.color_picker("基础色调", key="hair_base_color")
             hair_params['intensity'] = st.slider("处理强度", 0.0, 1.5, 1.0, key='h_int')
 
     # --- 模块 2: 面部编辑 ---
@@ -280,14 +346,31 @@ with st.sidebar:
             face_params['color'] = "#FF0000"
     
     st.markdown("---")
-    uploaded_file = st.file_uploader("📂 上传图片 (推荐使用肖像照)", type=["jpg", "png", "jpeg"])
     run_analysis = st.button("开始计算 / 更新结果", type="primary", use_container_width=True)
+
+    with st.expander("📚 原理介绍", expanded=False):
+        st.markdown("**1. 二维仿射变换**  \n旋转、缩放和平移可统一写为二维坐标的线性变换与平移组合：")
+        st.latex(r"\begin{bmatrix}x'\\y'\end{bmatrix}=\begin{bmatrix}s\cos\theta&-s\sin\theta\\s\sin\theta&s\cos\theta\end{bmatrix}\begin{bmatrix}x\\y\end{bmatrix}+\begin{bmatrix}t_x\\t_y\end{bmatrix}")
+        st.latex(r"A=\begin{bmatrix}s\cos\theta&-s\sin\theta&t_x\\s\sin\theta&s\cos\theta&t_y\end{bmatrix}")
+
+        st.markdown("**2. 单应性矩阵与透视投影**  \n使用齐次坐标后，平面透视关系可由一个 $3\\times3$ 单应性矩阵表示，最后用 $w'$ 归一化回二维坐标：")
+        st.latex(r"\begin{bmatrix}\tilde{x}\\\tilde{y}\\\tilde{w}\end{bmatrix}=H\begin{bmatrix}x\\y\\1\end{bmatrix},\quad H=\begin{bmatrix}h_{11}&h_{12}&h_{13}\\h_{21}&h_{22}&h_{23}\\h_{31}&h_{32}&h_{33}\end{bmatrix}")
+        st.latex(r"x'=\frac{\tilde{x}}{\tilde{w}},\qquad y'=\frac{\tilde{y}}{\tilde{w}}")
+
+        st.markdown("**3. 四种镜面反射**")
+        st.latex(r"R_{x'=-x}=\begin{bmatrix}-1&0\\0&1\end{bmatrix},\quad R_{y'=-y}=\begin{bmatrix}1&0\\0&-1\end{bmatrix}")
+        st.latex(r"R_{y=x}=\begin{bmatrix}0&1\\1&0\end{bmatrix},\quad R_{y=-x}=\begin{bmatrix}0&-1\\-1&0\end{bmatrix}")
+
+        st.markdown("**4. 语义掩膜与协方差对齐**  \n分割网络先生成语义掩膜 $M$，只让目标区域参与色彩变换。理论上的均值平移与协方差缩放可将原分布对齐到目标色彩分布：")
+        st.latex(r"\mu=\frac{\sum_i M_i x_i}{\sum_i M_i},\qquad \Sigma=\frac{\sum_i M_i(x_i-\mu)(x_i-\mu)^T}{\sum_i M_i}")
+        st.latex(r"x'_i=\mu_t+\Sigma_t^{1/2}\Sigma_s^{-1/2}(x_i-\mu_s),\qquad I'=(1-M)\odot I+M\odot X'")
+        st.caption("当前 apply_matrix_color_edit 在 HSV 通道上用增益、偏移和软掩膜融合实现这一分布调整思想的轻量近似，并由强度参数控制融合程度。")
 
     with st.expander("📖 平台使用说明书", expanded=False):
         st.markdown("""
         **1. 图片输入**
-        - 可上传自己的肖像图片。
-        - 未上传时，系统展示默认预览图片。
+        - 上传图片优先，其次使用选中的示例图，未选择时展示默认图。
+        - 示例图库支持直接选择 `example` 目录中的图片。
 
         **2. 几何变换**
         - 几何变换是独立视觉模块。
@@ -309,8 +392,8 @@ with st.sidebar:
 # 5. 主界面逻辑 (Main Area)
 # ==========================================
 
-st.title("🎨 矩阵分析工作台")
-st.caption("基于协方差对齐与张量变形的语义风格迁移系统")
+st.title("西电高等代数实验室")
+st.caption("矩阵分析工作台 · 基于协方差对齐与张量变形的语义风格迁移系统")
 
 torch_ver = torch.__version__
 st.markdown(f"""
@@ -325,12 +408,18 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 image = None
-DEFAULT_IMAGE_PATH = "./example/test.png" 
+DEFAULT_IMAGE_PATH = "./example/test.png"
+image_source = ""
 
 if uploaded_file:
     image = Image.open(uploaded_file).convert("RGB")
+    image_source = f"上传图片：{uploaded_file.name}"
+elif st.session_state["selected_example"] and os.path.exists(st.session_state["selected_example"]):
+    image = Image.open(st.session_state["selected_example"]).convert("RGB")
+    image_source = f"示例图片：{os.path.basename(st.session_state['selected_example'])}"
 elif os.path.exists(DEFAULT_IMAGE_PATH):
     image = Image.open(DEFAULT_IMAGE_PATH).convert("RGB")
+    image_source = f"默认图片：{os.path.basename(DEFAULT_IMAGE_PATH)}"
     st.sidebar.caption("ℹ️ 当前正在展示默认示例图片")
 
 if image is not None and run_analysis:
@@ -379,34 +468,43 @@ if image is not None and run_analysis:
 
         # 定义变换函数 (支持透视变换)
         def apply_transform(tensor, params):
-            # A. 反射
-            if params.get('flip_x'): tensor = hflip(tensor)
-            if params.get('flip_y'): tensor = vflip(tensor)
-            
-            # B. 透视变换
+            # A. 平面仿射
+            tensor = affine(
+                tensor,
+                angle=params.get('angle', 0),
+                translate=[params.get('translate_x', 0), params.get('translate_y', 0)],
+                scale=params.get('scale', 1.0),
+                shear=0,
+                interpolation=InterpolationMode.BILINEAR,
+                fill=0,
+            )
+
+            # B. 透视变换（使用仿射变换后的实际尺寸）
             distortion = params.get('persp_distortion', 0.0)
             if distortion > 0:
                 _, _, h, w = tensor.shape
-                startpoints = [[0, 0], [w, 0], [w, h], [0, h]]
+                startpoints = [[0, 0], [w - 1, 0], [w - 1, h - 1], [0, h - 1]]
                 d = int(distortion * min(w, h))
                 direction = params.get('persp_direction', 'left')
                 
-                if direction == 'left': endpoints = [[0 + d, 0 + d], [w, 0], [w, h], [0 + d, h - d]]
-                elif direction == 'right': endpoints = [[0, 0], [w - d, 0 + d], [w - d, h - d], [0, h]]
-                elif direction == 'top': endpoints = [[0 + d, 0 + d], [w - d, 0 + d], [w, h], [0, h]]
-                elif direction == 'bottom': endpoints = [[0, 0], [w, 0], [w, h], [0 + d, h - d]]
+                if direction == 'left': endpoints = [[d, d], [w - 1, 0], [w - 1, h - 1], [d, h - 1 - d]]
+                elif direction == 'right': endpoints = [[0, 0], [w - 1 - d, d], [w - 1 - d, h - 1 - d], [0, h - 1]]
+                elif direction == 'top': endpoints = [[d, d], [w - 1 - d, d], [w - 1, h - 1], [0, h - 1]]
+                elif direction == 'bottom': endpoints = [[0, 0], [w - 1, 0], [w - 1, h - 1], [d, h - 1 - d]]
                 else: endpoints = startpoints
 
                 tensor = perspective(tensor, startpoints, endpoints, interpolation=InterpolationMode.BILINEAR, fill=0)
 
-            # C. 平面仿射
-            tensor = affine(
-                tensor, 
-                angle=params.get('angle', 0), 
-                translate=[params.get('translate_x', 0), params.get('translate_y', 0)], 
-                scale=params.get('scale', 1.0), 
-                shear=0, interpolation=InterpolationMode.BILINEAR, fill=0
-            )
+            # C. 反射。对角线反射会交换 H/W，后续步骤读取张量实际尺寸。
+            if params.get('flip_x'):
+                tensor = hflip(tensor)
+            if params.get('flip_y'):
+                tensor = vflip(tensor)
+            if params.get('reflect_y_eq_x'):
+                tensor = torch.transpose(tensor, -1, -2)
+            if params.get('reflect_y_eq_neg_x'):
+                tensor = torch.transpose(tensor, -1, -2)
+                tensor = vflip(hflip(tensor))
             return tensor
 
         if edit_geom:
@@ -427,132 +525,192 @@ if image is not None and run_analysis:
             out_gan = out_gan.squeeze(0).clip(-1, 1) * 0.5 + 0.5
             vis_anime_pil = to_pil_image(out_gan)
 
+    parameter_snapshot = {
+        "图片来源": image_source,
+        "风格模型": style_opt,
+        "几何变换": "启用" if edit_geom else "关闭",
+        "旋转角度": geom_params.get('angle', 0) if edit_geom else "未启用",
+        "缩放比例": geom_params.get('scale', 1.0) if edit_geom else "未启用",
+        "X轴平移": geom_params.get('translate_x', 0) if edit_geom else "未启用",
+        "Y轴平移": geom_params.get('translate_y', 0) if edit_geom else "未启用",
+        "透视强度": geom_params.get('persp_distortion', 0.0) if edit_geom else "未启用",
+        "透视方向": geom_params.get('persp_direction', "left") if edit_geom else "未启用",
+        "x'=-x 反射": bool(geom_params.get('flip_x')) if edit_geom else False,
+        "y'=-y 反射": bool(geom_params.get('flip_y')) if edit_geom else False,
+        "沿 y=x 反射": bool(geom_params.get('reflect_y_eq_x')) if edit_geom else False,
+        "沿 y=-x 反射": bool(geom_params.get('reflect_y_eq_neg_x')) if edit_geom else False,
+        "辅助网格": bool(geom_params.get('show_grid')) if edit_geom else False,
+        "头发编辑": "启用" if edit_hair else "关闭",
+        "头发颜色": hair_params.get('color', "未启用"),
+        "头发强度": hair_params.get('intensity', "未启用"),
+        "面部编辑": "启用" if edit_face else "关闭",
+        "腮红强度": face_params.get('intensity', "未启用"),
+    }
+    debug_history_cpu = {}
+    for layer, layer_data in debug_history.items():
+        value_key = "Final V" if layer == "hair" else "Final S"
+        debug_history_cpu[layer] = {
+            key: layer_data[key].detach().cpu()
+            for key in ("Processed Mask", value_key)
+            if key in layer_data
+        }
+    new_run = {
+        "input": vis_input_pil.copy(),
+        "edited": vis_edited_pil.copy(),
+        "output": vis_anime_pil.copy(),
+        "params": parameter_snapshot,
+        "debug_history": debug_history_cpu,
+    }
+    previous_run = st.session_state["last_run"]
+    if previous_run is not None:
+        previous_run = {
+            key: value for key, value in previous_run.items()
+            if key != "debug_history"
+        }
+    st.session_state["prev_run"] = previous_run
+    st.session_state["last_run"] = new_run
+
+
+def create_analysis_plot(tensor_mask, tensor_channel, title_prefix):
+    data_mask = tensor_mask.squeeze().detach().cpu().numpy()
+    data_channel = tensor_channel.squeeze().detach().cpu().numpy()
+    flat_data = data_channel.flatten()
+    flat_data = flat_data[flat_data > 0.05]
+    title_font = {"fontproperties": font_prop} if font_prop else {}
+
+    fig = plt.figure(figsize=(6, 5))
+    gs = fig.add_gridspec(2, 2, height_ratios=[1, 0.8], wspace=0.3, hspace=0.35)
+
+    ax1 = fig.add_subplot(gs[0, 0])
+    im1 = ax1.imshow(data_mask, cmap='magma')
+    ax1.set_title("语义掩膜 ($\\mathbf{M}$)", color='white', fontsize=9, **title_font)
+    ax1.axis('off')
+    cbar1 = plt.colorbar(im1, ax=ax1, fraction=0.046, pad=0.04)
+    cbar1.ax.yaxis.set_tick_params(color='white')
+    plt.setp(plt.getp(cbar1.ax.axes, 'yticklabels'), color='white', fontsize=8)
+    cbar1.outline.set_edgecolor('none')
+
+    ax2 = fig.add_subplot(gs[0, 1])
+    im2 = ax2.imshow(data_channel, cmap='viridis')
+    ax2.set_title(f"通道响应 ($\\mathbf{{I}}'_{{{title_prefix}}}$)", color='white', fontsize=9, **title_font)
+    ax2.axis('off')
+    cbar2 = plt.colorbar(im2, ax=ax2, fraction=0.046, pad=0.04)
+    cbar2.ax.yaxis.set_tick_params(color='white')
+    plt.setp(plt.getp(cbar2.ax.axes, 'yticklabels'), color='white', fontsize=8)
+    cbar2.outline.set_edgecolor('none')
+
+    ax3 = fig.add_subplot(gs[1, :])
+    if flat_data.size:
+        sns.histplot(flat_data, bins=40, color='#00AAFF', alpha=0.6, kde=True, element="step", fill=True, ax=ax3, line_kws={'linewidth': 1.5})
+    ax3.set_title("像素数值分布 / Pixel Value Distribution", color='white', fontsize=9, pad=10, **title_font)
+    ax3.set_facecolor('#0e1117')
+    ax3.grid(visible=True, which='major', axis='y', color='#444', linestyle='--', linewidth=0.5, alpha=0.5)
+    ax3.tick_params(axis='both', colors='white', labelsize=8)
+    for label in ax3.get_xticklabels() + ax3.get_yticklabels():
+        label.set_color('white')
+    ax3.xaxis.label.set_color('white')
+    ax3.yaxis.label.set_color('white')
+    sns.despine(ax=ax3, left=True, bottom=False)
+    ax3.spines['bottom'].set_color('#FFFFFF')
+    ax3.set_ylabel("")
+    fig.patch.set_facecolor('#161920')
+    return fig
+
+
+def render_parameter_summary(params, changed_keys):
+    rows = []
+    for key, value in params.items():
+        safe_key = html.escape(str(key))
+        safe_value = html.escape(str(value))
+        if key in changed_keys:
+            rows.append(f"<div style='color:#FFD166'><b>{safe_key}：</b>{safe_value}（已变化）</div>")
+        else:
+            rows.append(f"<div style='color:#BBBBBB'><b>{safe_key}：</b>{safe_value}</div>")
+    st.markdown("".join(rows), unsafe_allow_html=True)
+
+
+last_run = st.session_state["last_run"]
+if last_run is not None:
     st.markdown("""
         <style>
         .result-card {
-            border: 1px solid #e0e0e0; border-radius: 12px; padding: 16px; background-color: #f4f6f9;
+            border: 1px solid #333; border-radius: 8px; padding: 16px; background-color: #161920;
             height: 400px; display: flex; flex-direction: column; justify-content: space-between;
-            align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.18);
         }
-        .result-title { text-align: center; font-weight: 600; font-size: 1em; color: #0077cc; margin-bottom: 10px; }
+        .result-title { text-align: center; font-weight: 600; font-size: 1em; color: #00AAFF; margin-bottom: 10px; }
         .result-card img { max-height: 280px; width: auto; max-width: 100%; object-fit: contain; border-radius: 4px; flex-grow: 1; margin: 5px 0; }
-        .img-caption { text-align: center; font-size: 0.85em; color: #555; margin-top: 8px; font-family: monospace; }
+        .img-caption { text-align: center; font-size: 0.85em; color: #AAAAAA; margin-top: 8px; font-family: monospace; }
         </style>
         """, unsafe_allow_html=True)
-        
+
     st.subheader("🖼️ 效果预览 (Process Visualization)")
     col_v1, col_v2, col_v3 = st.columns(3, gap="medium")
+    result_cards = [
+        (col_v1, "阶段一 · 原始输入", last_run["input"], "已应用几何变换"),
+        (col_v2, "阶段二 · 矩阵编辑状态", last_run["edited"], "语义色彩矩阵运算"),
+        (col_v3, "阶段三 · 最终输出", last_run["output"], f"风格模型: {last_run['params']['风格模型']}"),
+    ]
+    for result_col, title, result_image, caption in result_cards:
+        with result_col:
+            st.markdown(
+                f"<div class='result-card'><div class='result-title'>{title}</div>"
+                f"<img src='{pil_to_base64(result_image)}'><div class='img-caption'>{caption}</div></div>",
+                unsafe_allow_html=True,
+            )
 
-    with col_v1:
-        img_b64 = pil_to_base64(vis_input_pil)
-        st.markdown(f"""<div class='result-card'><div class='result-title'>阶段一 · 原始输入</div><img src='{img_b64}'><div class='img-caption'>已应用几何变换</div></div>""", unsafe_allow_html=True)
-
-    with col_v2:
-        img_b64 = pil_to_base64(vis_edited_pil)
-        st.markdown(f"""<div class='result-card'><div class='result-title'>阶段二 · 矩阵编辑状态</div><img src='{img_b64}'><div class='img-caption'>语义色彩矩阵运算</div></div>""", unsafe_allow_html=True)
-
-    with col_v3:
-        img_b64 = pil_to_base64(vis_anime_pil)
-        st.markdown(f"""<div class='result-card'><div class='result-title'>阶段三 · 最终输出</div><img src='{img_b64}'><div class='img-caption'>风格模型: {style_opt}</div></div>""", unsafe_allow_html=True)
-
-    st.write("")
-    st.write("")
-
-    # ==========================================
-    # 7. 矩阵数值分析 (静止状态)
-    # ==========================================
+    debug_history = last_run["debug_history"]
     st.subheader("📊 矩阵数值分析 (Matrix Analytics Breakdown)")
     if not debug_history:
         st.info("ℹ️ 暂无数据。请在侧边栏勾选“头发”或“面部”编辑以激活矩阵分析模块。")
     else:
-        def create_analysis_plot(tensor_mask, tensor_channel, title_prefix):
-            data_mask = tensor_mask.squeeze().detach().cpu().numpy()
-            data_channel = tensor_channel.squeeze().detach().cpu().numpy()
-            flat_data = data_channel.flatten()
-            flat_data = flat_data[flat_data > 0.05] 
-            title_font = {"fontproperties": font_prop} if font_prop else {}
-            
-            fig = plt.figure(figsize=(6, 5))
-            gs = fig.add_gridspec(2, 2, height_ratios=[1, 0.8], wspace=0.3, hspace=0.35)
-            
-            # Mask
-            ax1 = fig.add_subplot(gs[0, 0])
-            im1 = ax1.imshow(data_mask, cmap='magma')
-            ax1.set_title(f"语义掩膜 ($\mathbf{{M}}$)", color='white', fontsize=9, **title_font)
-            ax1.axis('off')
-            # Colorbar 1
-            cbar1 = plt.colorbar(im1, ax=ax1, fraction=0.046, pad=0.04)
-            cbar1.ax.yaxis.set_tick_params(color='white') 
-            plt.setp(plt.getp(cbar1.ax.axes, 'yticklabels'), color='white', fontsize=8) 
-            cbar1.outline.set_edgecolor('none') 
-            
-            # Channel
-            ax2 = fig.add_subplot(gs[0, 1])
-            im2 = ax2.imshow(data_channel, cmap='viridis')
-            ax2.set_title(f"通道响应 ($\mathbf{{I}}'_{{{title_prefix}}}$)", color='white', fontsize=9, **title_font)
-            ax2.axis('off')
-            # Colorbar 2
-            cbar2 = plt.colorbar(im2, ax=ax2, fraction=0.046, pad=0.04)
-            cbar2.ax.yaxis.set_tick_params(color='white')
-            plt.setp(plt.getp(cbar2.ax.axes, 'yticklabels'), color='white', fontsize=8)
-            cbar2.outline.set_edgecolor('none')
-            
-            # Hist
-            ax3 = fig.add_subplot(gs[1, :])
-            sns.histplot(flat_data, bins=40, color='#00AAFF', alpha=0.6, kde=True, element="step", fill=True, ax=ax3, line_kws={'linewidth': 1.5})
-            ax3.set_title("像素数值分布 / Pixel Value Distribution", color='white', fontsize=9, pad=10, **title_font)
-            ax3.set_facecolor('#0e1117')
-            
-            ax3.grid(visible=True, which='major', axis='y', color='#444', linestyle='--', linewidth=0.5, alpha=0.5)
-            ax3.tick_params(axis='both', colors='white', labelsize=8) 
-            for label in ax3.get_xticklabels() + ax3.get_yticklabels():
-                label.set_color('white')
-            ax3.xaxis.label.set_color('white')
-            ax3.yaxis.label.set_color('white')
-            
-            sns.despine(ax=ax3, left=True, bottom=False) 
-            ax3.spines['bottom'].set_color('#FFFFFF')
-            ax3.set_ylabel("") 
-            fig.patch.set_facecolor('#161920')
-            return fig
-
         col_ana1, col_ana2 = st.columns(2, gap="large")
-        
-        with col_ana1:
-            st.markdown("<h3 style='text-align: center; margin-bottom: 10px;'>💇‍♀️ 头发矩阵图层</h3>", unsafe_allow_html=True)
-            if 'hair' in debug_history:
+        analysis_configs = [
+            (col_ana1, "💇‍♀️ 头发矩阵图层", "hair", "Final V", "v", ("Avg Value", "Variance", "Max Shift")),
+            (col_ana2, "☺️ 面部高斯图层", "face", "Final S", "s", ("Avg Sat.", "Variance", "Peak Int.")),
+        ]
+        for analysis_col, title, layer, value_key, channel, metric_labels in analysis_configs:
+            with analysis_col:
+                st.markdown(f"<h3 style='text-align:center; margin-bottom:10px;'>{title}</h3>", unsafe_allow_html=True)
+                if layer not in debug_history:
+                    st.markdown(f"<div class='inactive-box'>⚠️ {layer.title()} Matrix Inactive</div>", unsafe_allow_html=True)
+                    continue
                 with st.container(border=True):
-                    d = debug_history['hair']
-                    m1, m2, m3 = st.columns(3)
-                    val_data = d['Final V'].detach().cpu().numpy().flatten()
+                    data = debug_history[layer]
+                    val_data = data[value_key].detach().cpu().numpy().flatten()
                     val_data = val_data[val_data > 0.05]
-                    m1.metric("Avg Value", f"{val_data.mean():.2f}")
-                    m2.metric("Variance", f"{val_data.var():.3f}")
-                    m3.metric("Max Shift", f"{val_data.max():.2f}")
+                    metric_cols = st.columns(3)
+                    metric_values = (
+                        f"{val_data.mean():.2f}" if val_data.size else "--",
+                        f"{val_data.var():.3f}" if val_data.size else "--",
+                        f"{val_data.max():.2f}" if val_data.size else "--",
+                    )
+                    for metric_col, label, value in zip(metric_cols, metric_labels, metric_values):
+                        metric_col.metric(label, value)
                     st.divider()
-                    fig = create_analysis_plot(d['Processed Mask'], d['Final V'], "v")
+                    fig = create_analysis_plot(data['Processed Mask'], data[value_key], channel)
                     st.pyplot(fig)
                     plt.close(fig)
-            else:
-                st.markdown("<div class='inactive-box'>⚠️ Hair Matrix Inactive</div>", unsafe_allow_html=True)
 
-        with col_ana2:
-            st.markdown("<h3 style='text-align: center; margin-bottom: 10px;'>☺️ 面部高斯图层</h3>", unsafe_allow_html=True)
-            if 'face' in debug_history:
-                with st.container(border=True):
-                    d = debug_history['face']
-                    m1, m2, m3 = st.columns(3)
-                    val_data = d['Final S'].detach().cpu().numpy().flatten()
-                    val_data = val_data[val_data > 0.05]
-                    m1.metric("Avg Sat.", f"{val_data.mean():.2f}")
-                    m2.metric("Variance", f"{val_data.var():.3f}")
-                    m3.metric("Peak Int.", f"{val_data.max():.2f}")
-                    st.divider()
-                    fig = create_analysis_plot(d['Processed Mask'], d['Final S'], "s")
-                    st.pyplot(fig)
-                    plt.close(fig)
-            else:
-                st.markdown("<div class='inactive-box'>⚠️ Face Matrix Inactive</div>", unsafe_allow_html=True)
+    prev_run = st.session_state["prev_run"]
+    if prev_run is not None:
+        st.subheader("🔍 新旧结果对比")
+        changed_keys = [
+            key for key in last_run["params"]
+            if last_run["params"].get(key) != prev_run["params"].get(key)
+        ][:2]
+        if not changed_keys:
+            st.caption("两次运行的参数相同。")
+        compare_old, compare_new = st.columns(2, gap="large")
+        with compare_old:
+            st.markdown("#### 上一次结果")
+            st.image(prev_run["output"], use_container_width=True)
+            render_parameter_summary(prev_run["params"], changed_keys)
+        with compare_new:
+            st.markdown("#### 本次结果")
+            st.image(last_run["output"], use_container_width=True)
+            render_parameter_summary(last_run["params"], changed_keys)
+        st.button("清空历史", on_click=clear_run_history)
 
 elif image is not None:
     image.thumbnail((MAX_INFERENCE_SIZE, MAX_INFERENCE_SIZE))
@@ -563,33 +721,3 @@ elif image is not None:
 
 else:
     st.info("👈 请从侧边栏上传图片以开始。")
-
-st.divider()
-
-# ==========================================
-# 8. 底部：团队贡献
-# ==========================================
-st.markdown("""
-<div style="background-color: #121417; border: 1px solid #00AAFF; padding: 25px; border-radius: 10px; text-align: center;">
-    <h3 style="color: #00AAFF; margin-top: 0;">📜 贡献声明</h3>
-    <p style="font-size: 1.1em; color: #E0E0E0;">
-        本项目由团队全员协作完成。我们在此声明：<b>下列所有成员在理论推导、矩阵算法实现、系统部署及文档编写方面均做出了同等贡献。</b>
-    </p>
-    <hr style="border: 0; border-top: 1px solid #333; margin: 20px 0;">
-    <p style="font-size: 1em; color: #BBBBBB; line-height: 1.8;">
-        <b>👥 团队成员</b><br>
-        <span style="color: #FFF;"> 唐斌伟 </span> &nbsp;•&nbsp; 
-        <span style="color: #FFF;"> 周鑫 </span> &nbsp;•&nbsp; 
-        <span style="color: #FFF;"> 梁站 </span> &nbsp;•&nbsp; 
-        <span style="color: #FFF;"> 邓钊 </span> &nbsp;•&nbsp; 
-        <span style="color: #FFF;"> 宋新杰 </span><br>
-        <span style="color: #FFF;"> 田宙 </span> &nbsp;•&nbsp; 
-        <span style="color: #FFF;"> 路冰 </span> &nbsp;•&nbsp; 
-        <span style="color: #FFF;"> 陈丽汀 </span> &nbsp;•&nbsp; 
-        <span style="color: #FFF;"> 彭佳园 </span>
-    </p>
-    <p style="font-size: 0.95em; color: #BBBBBB; margin-bottom: 0;">
-        <b>联系人:</b> <span style="color: #FFF;">dengzhaowork@gmail.com</span>
-    </p>
-</div>
-""", unsafe_allow_html=True)
