@@ -134,16 +134,41 @@ def require_password():
     if st.session_state["authenticated"]:
         return
 
-    st.title("西电高等代数实验室")
-    st.caption("矩阵分析工作台 · 请输入访问密码")
-    password = st.text_input("密码", type="password")
+    st.markdown("""
+    <style>
+        [data-testid="stSidebar"] { display: none; }
+        .course-watermark { display: none; }
+        .main .block-container {
+            padding-top: 16vh !important;
+            max-width: 1200px;
+        }
+        [class*="st-key-password_card"] {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        [class*="st-key-password_card"] [data-testid="stVerticalBlockBorderWrapper"] {
+            background: #161920;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 2rem;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
-    if password:
-        if password == APP_PASSWORD:
-            st.session_state["authenticated"] = True
-            st.rerun()
-        else:
-            st.error("密码错误，请重新输入。")
+    _, password_col, _ = st.columns([1, 1, 1])
+    with password_col:
+        with st.container(border=True, key="password_card"):
+            st.title("西电高等代数实验室")
+            st.caption("矩阵分析工作台 · 请输入访问密码后继续")
+            password = st.text_input("密码", type="password", key="password_input")
+            submitted = st.button("进入实验室", type="primary", use_container_width=True)
+
+            if submitted:
+                if password == APP_PASSWORD:
+                    st.session_state["authenticated"] = True
+                    st.rerun()
+                else:
+                    st.error("密码错误，请重新输入。")
 
     st.stop()
 
@@ -154,6 +179,7 @@ for state_key, default_value in {
     "hair_base_color": "#a3ff00",
     "last_run": None,
     "prev_run": None,
+    "page": "workbench",
 }.items():
     if state_key not in st.session_state:
         st.session_state[state_key] = default_value
@@ -170,6 +196,10 @@ def set_hair_color(color):
 def clear_run_history():
     st.session_state["last_run"] = None
     st.session_state["prev_run"] = None
+
+
+def navigate_to(page):
+    st.session_state["page"] = page
 
 # ==========================================
 # 2. 模型加载逻辑
@@ -348,45 +378,89 @@ with st.sidebar:
     st.markdown("---")
     run_analysis = st.button("开始计算 / 更新结果", type="primary", use_container_width=True)
 
-    with st.expander("📚 原理介绍", expanded=False):
-        st.markdown("**1. 二维仿射变换**  \n旋转、缩放和平移可统一写为二维坐标的线性变换与平移组合：")
-        st.latex(r"\begin{bmatrix}x'\\y'\end{bmatrix}=\begin{bmatrix}s\cos\theta&-s\sin\theta\\s\sin\theta&s\cos\theta\end{bmatrix}\begin{bmatrix}x\\y\end{bmatrix}+\begin{bmatrix}t_x\\t_y\end{bmatrix}")
-        st.latex(r"A=\begin{bmatrix}s\cos\theta&-s\sin\theta&t_x\\s\sin\theta&s\cos\theta&t_y\end{bmatrix}")
+    st.divider()
+    st.caption("页面导航")
+    navigation_items = [
+        ("🎨 矩阵工作台", "workbench"),
+        ("📚 原理介绍", "principle"),
+        ("📖 使用说明", "manual"),
+    ]
+    for navigation_label, page_key in navigation_items:
+        st.button(
+            navigation_label,
+            key=f"navigate_{page_key}",
+            type="primary" if st.session_state["page"] == page_key else "secondary",
+            on_click=navigate_to,
+            args=(page_key,),
+            use_container_width=True,
+        )
 
-        st.markdown("**2. 单应性矩阵与透视投影**  \n使用齐次坐标后，平面透视关系可由一个 $3\\times3$ 单应性矩阵表示，最后用 $w'$ 归一化回二维坐标：")
-        st.latex(r"\begin{bmatrix}\tilde{x}\\\tilde{y}\\\tilde{w}\end{bmatrix}=H\begin{bmatrix}x\\y\\1\end{bmatrix},\quad H=\begin{bmatrix}h_{11}&h_{12}&h_{13}\\h_{21}&h_{22}&h_{23}\\h_{31}&h_{32}&h_{33}\end{bmatrix}")
-        st.latex(r"x'=\frac{\tilde{x}}{\tilde{w}},\qquad y'=\frac{\tilde{y}}{\tilde{w}}")
 
-        st.markdown("**3. 四种镜面反射**")
-        st.latex(r"R_{x'=-x}=\begin{bmatrix}-1&0\\0&1\end{bmatrix},\quad R_{y'=-y}=\begin{bmatrix}1&0\\0&-1\end{bmatrix}")
-        st.latex(r"R_{y=x}=\begin{bmatrix}0&1\\1&0\end{bmatrix},\quad R_{y=-x}=\begin{bmatrix}0&-1\\-1&0\end{bmatrix}")
+def render_principle_page():
+    st.title("📚 原理介绍")
+    st.caption("矩阵分析工作台中的线性代数基础")
 
-        st.markdown("**4. 语义掩膜与协方差对齐**  \n分割网络先生成语义掩膜 $M$，只让目标区域参与色彩变换。理论上的均值平移与协方差缩放可将原分布对齐到目标色彩分布：")
-        st.latex(r"\mu=\frac{\sum_i M_i x_i}{\sum_i M_i},\qquad \Sigma=\frac{\sum_i M_i(x_i-\mu)(x_i-\mu)^T}{\sum_i M_i}")
-        st.latex(r"x'_i=\mu_t+\Sigma_t^{1/2}\Sigma_s^{-1/2}(x_i-\mu_s),\qquad I'=(1-M)\odot I+M\odot X'")
-        st.caption("当前 apply_matrix_color_edit 在 HSV 通道上用增益、偏移和软掩膜融合实现这一分布调整思想的轻量近似，并由强度参数控制融合程度。")
+    st.header("二维仿射变换")
+    st.markdown("旋转、缩放和平移可统一写为二维坐标的线性变换与平移组合：")
+    st.latex(r"\begin{bmatrix}x'\\y'\end{bmatrix}=\begin{bmatrix}s\cos\theta&-s\sin\theta\\s\sin\theta&s\cos\theta\end{bmatrix}\begin{bmatrix}x\\y\end{bmatrix}+\begin{bmatrix}t_x\\t_y\end{bmatrix}")
+    st.latex(r"A=\begin{bmatrix}s\cos\theta&-s\sin\theta&t_x\\s\sin\theta&s\cos\theta&t_y\end{bmatrix}")
 
-    with st.expander("📖 平台使用说明书", expanded=False):
-        st.markdown("""
-        **1. 图片输入**
-        - 上传图片优先，其次使用选中的示例图，未选择时展示默认图。
-        - 示例图库支持直接选择 `example` 目录中的图片。
+    st.header("单应性矩阵与透视投影")
+    st.markdown("使用齐次坐标后，平面透视关系可由一个 $3\\times3$ 单应性矩阵表示，最后用 $w'$ 归一化回二维坐标：")
+    st.latex(r"\begin{bmatrix}\tilde{x}\\\tilde{y}\\\tilde{w}\end{bmatrix}=H\begin{bmatrix}x\\y\\1\end{bmatrix},\quad H=\begin{bmatrix}h_{11}&h_{12}&h_{13}\\h_{21}&h_{22}&h_{23}\\h_{31}&h_{32}&h_{33}\end{bmatrix}")
+    st.latex(r"x'=\frac{\tilde{x}}{\tilde{w}},\qquad y'=\frac{\tilde{y}}{\tilde{w}}")
 
-        **2. 几何变换**
-        - 几何变换是独立视觉模块。
-        - 可单独启用或关闭。
-        - 仅影响预览图与最终生成结果。
-        - 不参与下方矩阵数值分析。
+    st.header("四种镜面反射")
+    st.markdown("四种反射都可由二维线性变换矩阵表示：")
+    st.latex(r"R_{x'=-x}=\begin{bmatrix}-1&0\\0&1\end{bmatrix},\quad R_{y'=-y}=\begin{bmatrix}1&0\\0&-1\end{bmatrix}")
+    st.latex(r"R_{y=x}=\begin{bmatrix}0&1\\1&0\end{bmatrix},\quad R_{y=-x}=\begin{bmatrix}0&-1\\-1&0\end{bmatrix}")
 
-        **3. 头发与面部矩阵编辑**
-        - 头发矩阵编辑和面部矩阵编辑可单独开启。
-        - 两者也可以同时开启，效果会叠加。
-        - 矩阵数值分析只统计这两个语义图层。
+    st.header("语义掩膜与协方差对齐")
+    st.markdown("分割网络先生成语义掩膜 $M$，只让目标区域参与色彩变换。理论上的均值平移与协方差缩放可将原分布对齐到目标色彩分布：")
+    st.latex(r"\mu=\frac{\sum_i M_i x_i}{\sum_i M_i},\qquad \Sigma=\frac{\sum_i M_i(x_i-\mu)(x_i-\mu)^T}{\sum_i M_i}")
+    st.latex(r"x'_i=\mu_t+\Sigma_t^{1/2}\Sigma_s^{-1/2}(x_i-\mu_s),\qquad I'=(1-M)\odot I+M\odot X'")
+    st.info("当前 apply_matrix_color_edit 在 HSV 通道上用增益、偏移和软掩膜融合实现这一分布调整思想的轻量近似，并由强度参数控制融合程度。")
 
-        **4. 计算流程**
-        - 调整参数不会自动推理。
-        - 点击“开始计算 / 更新结果”后，系统才执行分割、矩阵编辑、几何变换和风格生成。
-        """)
+
+def render_manual_page():
+    st.title("📖 使用说明")
+    st.caption("矩阵分析工作台操作流程")
+
+    st.header("图片输入")
+    st.markdown("""
+    - 上传图片优先，其次使用选中的示例图，未选择时展示默认图。
+    - 示例图库支持直接选择 `example` 目录中的图片。
+    """)
+
+    st.header("几何变换")
+    st.markdown("""
+    - 几何变换是独立视觉模块，可单独启用或关闭。
+    - 几何变换仅影响预览图与最终生成结果，不参与矩阵数值分析。
+    - 处理顺序固定为仿射变换、透视投影、镜面反射。
+    """)
+
+    st.header("头发与面部矩阵编辑")
+    st.markdown("""
+    - 头发矩阵编辑和面部矩阵编辑可单独开启，也可同时开启并叠加效果。
+    - 矩阵数值分析只统计这两个语义图层。
+    """)
+
+    st.header("计算与结果")
+    st.markdown("""
+    - 调整参数不会自动推理。
+    - 点击“开始计算 / 更新结果”后，系统才执行分割、矩阵编辑、几何变换和风格生成。
+    - 系统会保留最近两次成功计算，可在工作台中查看新旧结果和参数差异。
+    - 页面切换不会清空计算结果、示例图选择或参数状态。
+    """)
+
+
+current_page = st.session_state["page"]
+if current_page == "principle":
+    render_principle_page()
+    st.stop()
+if current_page == "manual":
+    render_manual_page()
+    st.stop()
 
 # ==========================================
 # 5. 主界面逻辑 (Main Area)
