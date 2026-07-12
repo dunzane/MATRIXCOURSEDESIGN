@@ -174,12 +174,21 @@ def require_password():
             border-radius: 8px;
             padding: 2rem !important;
         }
+        [class*="st-key-password_input"] button {
+            display: none !important;
+        }
+        [class*="st-key-password_input"] input {
+            padding-right: 0.75rem !important;
+        }
     </style>
     """, unsafe_allow_html=True)
 
     _, password_col, _ = st.columns([1, 1, 1])
     with password_col:
         with st.container(border=True, key="password_card"):
+            _, logo_col, _ = st.columns([1, 1, 1])
+            with logo_col:
+                st.image("logo/icon.png", width=76)
             st.title("西电高等代数实验室")
             st.caption("矩阵分析工作台 · 请输入访问密码后继续")
             password = st.text_input("密码", type="password", key="password_input")
@@ -504,7 +513,6 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 image = None
-DEFAULT_IMAGE_PATH = "./example/test.png"
 image_source = ""
 
 if uploaded_file:
@@ -513,9 +521,10 @@ if uploaded_file:
 elif st.session_state["selected_example"] and os.path.exists(st.session_state["selected_example"]):
     image = Image.open(st.session_state["selected_example"]).convert("RGB")
     image_source = f"示例图片：{os.path.basename(st.session_state['selected_example'])}"
-elif os.path.exists(DEFAULT_IMAGE_PATH):
-    image = Image.open(DEFAULT_IMAGE_PATH).convert("RGB")
-    image_source = f"默认图片：{os.path.basename(DEFAULT_IMAGE_PATH)}"
+elif example_paths:
+    default_example_path = example_paths[0]
+    image = Image.open(default_example_path).convert("RGB")
+    image_source = f"默认图片：{os.path.basename(default_example_path)}"
     st.sidebar.caption("ℹ️ 当前正在展示默认示例图片")
 
 if image is not None and run_analysis:
