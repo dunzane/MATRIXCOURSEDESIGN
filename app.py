@@ -178,15 +178,35 @@ def require_password():
             display: none !important;
         }
         [class*="st-key-password_input"] input {
+            background: #FAF9F5 !important;
+            border: 1px solid #C15F3C !important;
+            border-radius: 6px !important;
             padding-right: 0.75rem !important;
+        }
+        [class*="st-key-password_input"] [data-baseweb="input"] {
+            background: #FAF9F5 !important;
+            border: 1px solid #C15F3C !important;
+            border-radius: 6px !important;
+            box-shadow: none !important;
+        }
+        [class*="st-key-password_input"] [data-testid="InputInstructions"],
+        [class*="st-key-password_input"] [data-testid="stTextInputInstructions"],
+        [class*="st-key-password_input"] small {
+            display: none !important;
         }
         [class*="st-key-password_logo"] [data-testid="stImage"] {
             display: flex;
             justify-content: center;
+            width: 100% !important;
+        }
+        [class*="st-key-password_logo"] {
+            align-items: center !important;
         }
         [class*="st-key-password_logo"] img {
+            display: block;
             width: 112px !important;
             height: auto !important;
+            margin: 0 auto;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -419,7 +439,7 @@ with st.sidebar:
 
 
 def render_principle_page():
-    st.title("📚 原理介绍")
+    st.header("📚 原理介绍")
     st.caption("矩阵分析工作台中的线性代数基础")
 
     st.header("二维仿射变换")
@@ -445,7 +465,7 @@ def render_principle_page():
 
 
 def render_manual_page():
-    st.title("📖 使用说明")
+    st.header("📖 使用说明")
     st.caption("矩阵分析工作台操作流程")
 
     st.header("图片输入")
@@ -476,6 +496,25 @@ def render_manual_page():
     """)
 
 
+def render_app_header():
+    st.title("西电高等代数实验室")
+    st.caption("矩阵分析工作台 · 基于协方差对齐与张量变形的语义风格迁移系统")
+
+    torch_ver = torch.__version__
+    st.markdown(f"""
+        <style>
+            .badge {{ padding: 4px 8px; border-radius: 4px; border: 1px solid; background: #F0EEE6; margin-right: 10px; font-family: monospace; font-size: 0.9em; color: #3D3929; display: inline-block; margin-bottom: 5px; }}
+        </style>
+        <div>
+            <span class="badge" style="border-color: #C15F3C;">⚡ <b style="color:#C15F3C">计算设备:</b> {DEVICE_LABEL}</span>
+            <span class="badge" style="border-color: #B4443C;">🔥 <b style="color:#B4443C">Torch版本:</b> v{torch_ver}</span>
+            <span class="badge" style="border-color: #5A8A5C;">🚀 <b style="color:#5A8A5C">CUDA环境:</b> {CUDA_LABEL}</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+render_app_header()
+
 page_navigation = {
     "🎨 矩阵工作台": "workbench",
     "📚 原理介绍": "principle",
@@ -504,25 +543,6 @@ if current_page == "principle":
 if current_page == "manual":
     render_manual_page()
     st.stop()
-
-# ==========================================
-# 5. 主界面逻辑 (Main Area)
-# ==========================================
-
-st.title("西电高等代数实验室")
-st.caption("矩阵分析工作台 · 基于协方差对齐与张量变形的语义风格迁移系统")
-
-torch_ver = torch.__version__
-st.markdown(f"""
-    <style>
-        .badge {{ padding: 4px 8px; border-radius: 4px; border: 1px solid; background: #F0EEE6; margin-right: 10px; font-family: monospace; font-size: 0.9em; color: #3D3929; display: inline-block; margin-bottom: 5px; }}
-    </style>
-    <div>
-        <span class="badge" style="border-color: #C15F3C;">⚡ <b style="color:#C15F3C">计算设备:</b> {DEVICE_LABEL}</span>
-        <span class="badge" style="border-color: #B4443C;">🔥 <b style="color:#B4443C">Torch版本:</b> v{torch_ver}</span>
-        <span class="badge" style="border-color: #5A8A5C;">🚀 <b style="color:#5A8A5C">CUDA环境:</b> {CUDA_LABEL}</span>
-    </div>
-    """, unsafe_allow_html=True)
 
 image = None
 image_source = ""

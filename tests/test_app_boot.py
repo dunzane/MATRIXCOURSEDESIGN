@@ -53,12 +53,12 @@ def test_password_navigation_state_and_reflection():
 
     at.radio(key="main_page_nav").set_value("📚 原理介绍").run()
     assert_clean_run(at)
-    assert any(title.value == "📚 原理介绍" for title in at.title)
+    assert any(header.value == "📚 原理介绍" for header in at.header)
     assert at.session_state["last_run"]["params"]["风格模型"] == "状态保留测试"
 
     at.radio(key="main_page_nav").set_value("📖 使用说明").run()
     assert_clean_run(at)
-    assert any(title.value == "📖 使用说明" for title in at.title)
+    assert any(header.value == "📖 使用说明" for header in at.header)
     assert at.session_state["last_run"]["params"]["风格模型"] == "状态保留测试"
 
     at.radio(key="main_page_nav").set_value("🎨 矩阵工作台").run()
