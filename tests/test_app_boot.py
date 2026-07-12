@@ -51,17 +51,17 @@ def test_password_navigation_state_and_reflection():
     }
     at.session_state["last_run"] = marker_run
 
-    at.button(key="navigate_principle").click().run()
+    at.radio(key="main_page_nav").set_value("📚 原理介绍").run()
     assert_clean_run(at)
     assert any(title.value == "📚 原理介绍" for title in at.title)
     assert at.session_state["last_run"]["params"]["风格模型"] == "状态保留测试"
 
-    at.button(key="navigate_manual").click().run()
+    at.radio(key="main_page_nav").set_value("📖 使用说明").run()
     assert_clean_run(at)
     assert any(title.value == "📖 使用说明" for title in at.title)
     assert at.session_state["last_run"]["params"]["风格模型"] == "状态保留测试"
 
-    at.button(key="navigate_workbench").click().run()
+    at.radio(key="main_page_nav").set_value("🎨 矩阵工作台").run()
     assert_clean_run(at)
     assert any(title.value == "西电高等代数实验室" for title in at.title)
     assert at.session_state["last_run"]["params"]["风格模型"] == "状态保留测试"

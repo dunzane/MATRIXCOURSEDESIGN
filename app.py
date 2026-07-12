@@ -180,15 +180,22 @@ def require_password():
         [class*="st-key-password_input"] input {
             padding-right: 0.75rem !important;
         }
+        [class*="st-key-password_logo"] [data-testid="stImage"] {
+            display: flex;
+            justify-content: center;
+        }
+        [class*="st-key-password_logo"] img {
+            width: 112px !important;
+            height: auto !important;
+        }
     </style>
     """, unsafe_allow_html=True)
 
     _, password_col, _ = st.columns([1, 1, 1])
     with password_col:
         with st.container(border=True, key="password_card"):
-            _, logo_col, _ = st.columns([1, 1, 1])
-            with logo_col:
-                st.image("logo/icon.png", width=76)
+            with st.container(key="password_logo"):
+                st.image("logo/icon.png", width=112, output_format="PNG")
             st.title("西电高等代数实验室")
             st.caption("矩阵分析工作台 · 请输入访问密码后继续")
             password = st.text_input("密码", type="password", key="password_input")
@@ -228,9 +235,6 @@ def clear_run_history():
     st.session_state["last_run"] = None
     st.session_state["prev_run"] = None
 
-
-def navigate_to(page):
-    st.session_state["page"] = page
 
 # ==========================================
 # 2. 模型加载逻辑
@@ -283,6 +287,7 @@ def draw_grid_on_tensor(tensor, step=80, color=(120, 120, 120)):
 # ==========================================
 
 with st.sidebar:
+    st.header("🎛️ 矩阵工作台面")
     uploaded_file = st.file_uploader("📂 上传图片（推荐使用肖像照）", type=["jpg", "png", "jpeg"])
 
     example_dir = "./example"
@@ -296,20 +301,23 @@ with st.sidebar:
 
     with st.expander("🖼️ 示例图库", expanded=False):
         if example_paths:
-            for row_start in range(0, len(example_paths), 3):
-                gallery_cols = st.columns(3)
-                for offset, example_path in enumerate(example_paths[row_start:row_start + 3]):
-                    with gallery_cols[offset]:
-                        st.image(example_path, use_container_width=True)
+            with st.container(height=360, border=False):
+                for index, example_path in enumerate(example_paths):
+                    preview_col, action_col = st.columns([1, 1])
+                    with preview_col:
+                        st.image(example_path, width=100)
+                    with action_col:
                         is_selected = st.session_state["selected_example"] == example_path
                         st.button(
                             "已选择" if is_selected else "使用此图",
-                            key=f"example_{row_start + offset}",
+                            key=f"example_{index}",
                             disabled=is_selected,
                             on_click=select_example,
                             args=(example_path,),
                             use_container_width=True,
                         )
+                    if index < len(example_paths) - 1:
+                        st.divider()
         else:
             st.caption("example 目录中暂无可用图片。")
 
@@ -409,23 +417,6 @@ with st.sidebar:
     st.markdown("---")
     run_analysis = st.button("开始计算 / 更新结果", type="primary", use_container_width=True)
 
-    st.divider()
-    st.caption("页面导航")
-    navigation_items = [
-        ("🎨 矩阵工作台", "workbench"),
-        ("📚 原理介绍", "principle"),
-        ("📖 使用说明", "manual"),
-    ]
-    for navigation_label, page_key in navigation_items:
-        st.button(
-            navigation_label,
-            key=f"navigate_{page_key}",
-            type="primary" if st.session_state["page"] == page_key else "secondary",
-            on_click=navigate_to,
-            args=(page_key,),
-            use_container_width=True,
-        )
-
 
 def render_principle_page():
     st.title("📚 原理介绍")
@@ -485,7 +476,28 @@ def render_manual_page():
     """)
 
 
+page_navigation = {
+    "🎨 矩阵工作台": "workbench",
+    "📚 原理介绍": "principle",
+    "📖 使用说明": "manual",
+}
+page_labels = list(page_navigation)
 current_page = st.session_state["page"]
+current_label = next(
+    label for label, page_key in page_navigation.items()
+    if page_key == current_page
+)
+selected_label = st.radio(
+    "页面导航",
+    page_labels,
+    index=page_labels.index(current_label),
+    horizontal=True,
+    label_visibility="collapsed",
+    key="main_page_nav",
+)
+st.session_state["page"] = page_navigation[selected_label]
+current_page = st.session_state["page"]
+st.divider()
 if current_page == "principle":
     render_principle_page()
     st.stop()
