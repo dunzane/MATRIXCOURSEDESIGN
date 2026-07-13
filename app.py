@@ -118,6 +118,15 @@ st.markdown("""
         max-width: 720px;
         margin: 0.75rem 0 0.25rem 0;
     }
+    [class*="st-key-main_page_nav"],
+    [class*="st-key-main_page_nav"] > div,
+    [class*="st-key-main_page_nav"] [data-testid="stWidgetLabel"],
+    [class*="st-key-main_page_nav"] [data-testid="stVerticalBlockBorderWrapper"] {
+        background: transparent !important;
+        border: 0 !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+    }
     [class*="st-key-main_page_nav"] label {
         min-height: 62px;
         padding: 0.8rem 1rem !important;
@@ -359,140 +368,128 @@ def draw_grid_on_tensor(tensor, step=80, color=(120, 120, 120)):
         
     return to_tensor(img_pil).to(tensor.device).unsqueeze(0)
 
-# ==========================================
-# 4. 侧边栏 (Sidebar)
-# ==========================================
-
-with st.sidebar:
-    st.header("🎛️ 矩阵工作台面")
-    uploaded_file = st.file_uploader("📂 上传图片（推荐使用肖像照）", type=["jpg", "png", "jpeg"])
-
+def get_example_paths():
     example_dir = "./example"
-    example_paths = []
-    if os.path.isdir(example_dir):
-        example_paths = sorted(
-            os.path.join(example_dir, name)
-            for name in os.listdir(example_dir)
-            if name.lower().endswith((".jpg", ".jpeg", ".png"))
-        )
+    if not os.path.isdir(example_dir):
+        return []
+    return sorted(
+        os.path.join(example_dir, name)
+        for name in os.listdir(example_dir)
+        if name.lower().endswith((".jpg", ".jpeg", ".png"))
+    )
 
-    with st.expander("🖼️ 示例图库", expanded=False):
-        if example_paths:
-            with st.container(height=360, border=False):
-                for index, example_path in enumerate(example_paths):
-                    preview_col, action_col = st.columns([1, 1])
-                    with preview_col:
-                        st.image(example_path, width=100)
-                    with action_col:
-                        is_selected = st.session_state["selected_example"] == example_path
+
+def render_workbench_sidebar(example_paths):
+    with st.sidebar:
+        st.header("🎛️ 矩阵工作台面")
+        uploaded_file = st.file_uploader("📂 上传图片（推荐使用肖像照）", type=["jpg", "png", "jpeg"])
+
+        with st.expander("🖼️ 示例图库", expanded=False):
+            if example_paths:
+                with st.container(height=360, border=False):
+                    for index, example_path in enumerate(example_paths):
+                        preview_col, action_col = st.columns([1, 1])
+                        with preview_col:
+                            st.image(example_path, width=100)
+                        with action_col:
+                            is_selected = st.session_state["selected_example"] == example_path
+                            st.button(
+                                "已选择" if is_selected else "使用此图",
+                                key=f"example_{index}",
+                                disabled=is_selected,
+                                on_click=select_example,
+                                args=(example_path,),
+                                use_container_width=True,
+                            )
+                        if index < len(example_paths) - 1:
+                            st.divider()
+            else:
+                st.caption("example 目录中暂无可用图片。")
+
+        st.divider()
+        st.header("🎛️ 系统设置")
+        style_opt = st.selectbox("选择动漫风格模型", list(STYLE_MAP.keys()))
+
+        st.divider()
+
+        st.header("🧠 矩阵编辑器")
+        st.info("支持多区域图层叠加编辑")
+
+        edit_geom = st.checkbox("启用：几何变换 (仿射/透视)", value=False)
+        geom_params = {}
+        if edit_geom:
+            with st.expander("📐 几何与空间变换参数", expanded=True):
+                st.markdown("**1. 平面仿射 (2D Affine)**")
+                affine_help_text = "基于仿射矩阵 (Affine Matrix) 实现图像的旋转、缩放和平移。\n\n矩阵形式：\n[ [cosθ, -sinθ, tx], \n  [sinθ,  cosθ, ty] ]"
+
+                col_g1, col_g2 = st.columns(2)
+                with col_g1:
+                    geom_params['angle'] = st.slider("平面旋转 (Z轴)", -45, 45, 0, help=affine_help_text)
+                    geom_params['scale'] = st.slider("缩放比例", 0.5, 1.5, 1.0)
+                with col_g2:
+                    geom_params['translate_x'] = st.slider("X轴平移", -100, 100, 0)
+                    geom_params['translate_y'] = st.slider("Y轴平移", -100, 100, 0)
+
+                st.divider()
+                st.markdown("**2. 透视投影 (Perspective)**")
+                persp_help_text = "基于单应性矩阵 (Homography Matrix) 模拟 3D 空间中的景深效果。\n\n通过改变图像四个角点的映射位置，实现近大远小的视觉透视。"
+
+                geom_params['show_grid'] = st.checkbox("显示辅助网格 (Grid)", value=True, help=persp_help_text + "\n\n开启此项可在原图上叠加网格线，以便观察变形。")
+                geom_params['persp_distortion'] = st.slider("透视强度 (Distortion)", 0.0, 0.5, 0.0, step=0.01, help="控制透视变形的剧烈程度。数值越大，图像边缘收缩越明显。")
+
+                direction_map = {"向左倾斜 (Left)": "left", "向右倾斜 (Right)": "right", "向上倾斜 (Top)": "top", "向下倾斜 (Bottom)": "bottom"}
+                direction_key = st.selectbox("倾斜方向", list(direction_map.keys()))
+                geom_params['persp_direction'] = direction_map[direction_key]
+
+                st.divider()
+                st.markdown("**3. 镜像反射 (Reflection)**")
+
+                reflect_help_text = (
+                    "四种反射按界面顺序依次叠加。\n\n"
+                    "- x'=-x：矩阵 [[-1, 0], [0, 1]]\n"
+                    "- y'=-y：矩阵 [[1, 0], [0, -1]]\n"
+                    "- 沿 y=x：矩阵 [[0, 1], [1, 0]]\n"
+                    "- 沿 y=-x：矩阵 [[0, -1], [-1, 0]]"
+                )
+
+                col_r1, col_r2 = st.columns(2)
+                with col_r1:
+                    geom_params['flip_x'] = st.checkbox("x' = -x", False, help=reflect_help_text)
+                    geom_params['reflect_y_eq_x'] = st.checkbox("沿 y = x 反射", False)
+                with col_r2:
+                    geom_params['flip_y'] = st.checkbox("y' = -y", False)
+                    geom_params['reflect_y_eq_neg_x'] = st.checkbox("沿 y = -x 反射", False)
+
+        edit_hair = st.checkbox("启用：头发矩阵编辑", value=True)
+        hair_params = {}
+        if edit_hair:
+            with st.expander("💇‍♀️ 头发参数调节", expanded=False):
+                st.caption("基础色调快捷选择")
+                preset_cols = st.columns(3)
+                presets = [("棕色", "#8B4513"), ("金黄", "#FFD700"), ("黑色", "#2B2B2B")]
+                for preset_col, (label, color) in zip(preset_cols, presets):
+                    with preset_col:
                         st.button(
-                            "已选择" if is_selected else "使用此图",
-                            key=f"example_{index}",
-                            disabled=is_selected,
-                            on_click=select_example,
-                            args=(example_path,),
+                            label,
+                            key=f"hair_preset_{color}",
+                            on_click=set_hair_color,
+                            args=(color,),
                             use_container_width=True,
                         )
-                    if index < len(example_paths) - 1:
-                        st.divider()
-        else:
-            st.caption("example 目录中暂无可用图片。")
+                hair_params['color'] = st.color_picker("基础色调", key="hair_base_color")
+                hair_params['intensity'] = st.slider("处理强度", 0.0, 1.5, 1.0, key='h_int')
 
-    st.divider()
-    st.header("🎛️ 系统设置")
-    style_opt = st.selectbox("选择动漫风格模型", list(STYLE_MAP.keys()))
-    
-    st.divider()
-    
-    st.header("🧠 矩阵编辑器")
-    st.info("支持多区域图层叠加编辑")
+        edit_face = st.checkbox("启用：面部矩阵编辑", value=True)
+        face_params = {}
+        if edit_face:
+            with st.expander("☺️ 面部参数调节", expanded=False):
+                face_params['intensity'] = st.slider("腮红强度", 0.0, 2.0, 1.0, key='f_int')
+                face_params['color'] = "#FF0000"
 
-    # --- 模块 0: 几何变换 ---
-    edit_geom = st.checkbox("启用：几何变换 (仿射/透视)", value=False)
-    geom_params = {}
-    if edit_geom:
-        with st.expander("📐 几何与空间变换参数", expanded=True):
-            # 1. 平面仿射
-            st.markdown("**1. 平面仿射 (2D Affine)**")
-            
-            # 修复：将 help 文案移动到 slider 的 help 参数中，避免使用 st.help()
-            affine_help_text = "基于仿射矩阵 (Affine Matrix) 实现图像的旋转、缩放和平移。\n\n矩阵形式：\n[ [cosθ, -sinθ, tx], \n  [sinθ,  cosθ, ty] ]"
-            
-            col_g1, col_g2 = st.columns(2)
-            with col_g1:
-                geom_params['angle'] = st.slider("平面旋转 (Z轴)", -45, 45, 0, help=affine_help_text)
-                geom_params['scale'] = st.slider("缩放比例", 0.5, 1.5, 1.0)
-            with col_g2:
-                geom_params['translate_x'] = st.slider("X轴平移", -100, 100, 0)
-                geom_params['translate_y'] = st.slider("Y轴平移", -100, 100, 0)
-            
-            st.divider()
-            
-            # 2. 透视投影
-            st.markdown("**2. 透视投影 (Perspective)**")
-            
-            # 修复：将 help 文案移动到 checkbox
-            persp_help_text = "基于单应性矩阵 (Homography Matrix) 模拟 3D 空间中的景深效果。\n\n通过改变图像四个角点的映射位置，实现近大远小的视觉透视。"
-            
-            geom_params['show_grid'] = st.checkbox("显示辅助网格 (Grid)", value=True, help=persp_help_text + "\n\n开启此项可在原图上叠加网格线，以便观察变形。")
-            
-            geom_params['persp_distortion'] = st.slider("透视强度 (Distortion)", 0.0, 0.5, 0.0, step=0.01, help="控制透视变形的剧烈程度。数值越大，图像边缘收缩越明显。")
-            
-            direction_map = {"向左倾斜 (Left)": "left", "向右倾斜 (Right)": "right", "向上倾斜 (Top)": "top", "向下倾斜 (Bottom)": "bottom"}
-            direction_key = st.selectbox("倾斜方向", list(direction_map.keys()))
-            geom_params['persp_direction'] = direction_map[direction_key]
-            
-            st.divider()
-            
-            # 3. 镜像反射
-            st.markdown("**3. 镜像反射 (Reflection)**")
-            
-            reflect_help_text = (
-                "四种反射按界面顺序依次叠加。\n\n"
-                "- x'=-x：矩阵 [[-1, 0], [0, 1]]\n"
-                "- y'=-y：矩阵 [[1, 0], [0, -1]]\n"
-                "- 沿 y=x：矩阵 [[0, 1], [1, 0]]\n"
-                "- 沿 y=-x：矩阵 [[0, -1], [-1, 0]]"
-            )
-            
-            col_r1, col_r2 = st.columns(2)
-            with col_r1:
-                geom_params['flip_x'] = st.checkbox("x' = -x", False, help=reflect_help_text)
-                geom_params['reflect_y_eq_x'] = st.checkbox("沿 y = x 反射", False)
-            with col_r2:
-                geom_params['flip_y'] = st.checkbox("y' = -y", False)
-                geom_params['reflect_y_eq_neg_x'] = st.checkbox("沿 y = -x 反射", False)
-    
-    # --- 模块 1: 头发编辑 ---
-    edit_hair = st.checkbox("启用：头发矩阵编辑", value=True)
-    hair_params = {}
-    if edit_hair:
-        with st.expander("💇‍♀️ 头发参数调节", expanded=False):
-            st.caption("基础色调快捷选择")
-            preset_cols = st.columns(3)
-            presets = [("棕色", "#8B4513"), ("金黄", "#FFD700"), ("黑色", "#2B2B2B")]
-            for preset_col, (label, color) in zip(preset_cols, presets):
-                with preset_col:
-                    st.button(
-                        label,
-                        key=f"hair_preset_{color}",
-                        on_click=set_hair_color,
-                        args=(color,),
-                        use_container_width=True,
-                    )
-            hair_params['color'] = st.color_picker("基础色调", key="hair_base_color")
-            hair_params['intensity'] = st.slider("处理强度", 0.0, 1.5, 1.0, key='h_int')
+        st.markdown("---")
+        run_analysis = st.button("开始计算 / 更新结果", type="primary", use_container_width=True)
 
-    # --- 模块 2: 面部编辑 ---
-    edit_face = st.checkbox("启用：面部矩阵编辑", value=True)
-    face_params = {}
-    if edit_face:
-        with st.expander("☺️ 面部参数调节", expanded=False):
-            face_params['intensity'] = st.slider("腮红强度", 0.0, 2.0, 1.0, key='f_int')
-            face_params['color'] = "#FF0000"
-    
-    st.markdown("---")
-    run_analysis = st.button("开始计算 / 更新结果", type="primary", use_container_width=True)
+    return uploaded_file, style_opt, edit_geom, geom_params, edit_hair, hair_params, edit_face, face_params, run_analysis
 
 
 def render_principle_page():
@@ -595,11 +592,40 @@ st.session_state["page"] = page_navigation[selected_label]
 current_page = st.session_state["page"]
 st.divider()
 if current_page == "principle":
+    st.markdown("""
+    <style>
+        [data-testid="stSidebar"],
+        [data-testid="collapsedControl"] {
+            display: none !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
     render_principle_page()
     st.stop()
 if current_page == "manual":
+    st.markdown("""
+    <style>
+        [data-testid="stSidebar"],
+        [data-testid="collapsedControl"] {
+            display: none !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
     render_manual_page()
     st.stop()
+
+example_paths = get_example_paths()
+(
+    uploaded_file,
+    style_opt,
+    edit_geom,
+    geom_params,
+    edit_hair,
+    hair_params,
+    edit_face,
+    face_params,
+    run_analysis,
+) = render_workbench_sidebar(example_paths)
 
 image = None
 image_source = ""

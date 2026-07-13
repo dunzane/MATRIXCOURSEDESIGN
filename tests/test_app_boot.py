@@ -54,16 +54,19 @@ def test_password_navigation_state_and_reflection():
     at.radio(key="main_page_nav").set_value("📚 原理介绍").run()
     assert_clean_run(at)
     assert any(header.value == "📚 原理介绍" for header in at.header)
+    assert len(at.get("file_uploader")) == 0
     assert at.session_state["last_run"]["params"]["风格模型"] == "状态保留测试"
 
     at.radio(key="main_page_nav").set_value("📖 使用说明").run()
     assert_clean_run(at)
     assert any(header.value == "📖 使用说明" for header in at.header)
+    assert len(at.get("file_uploader")) == 0
     assert at.session_state["last_run"]["params"]["风格模型"] == "状态保留测试"
 
     at.radio(key="main_page_nav").set_value("🎨 矩阵工作台").run()
     assert_clean_run(at)
     assert any(title.value == "西电高等代数实验室" for title in at.title)
+    assert len(at.get("file_uploader")) == 1
     assert at.session_state["last_run"]["params"]["风格模型"] == "状态保留测试"
 
     find_by_label(at.checkbox, "启用：几何变换 (仿射/透视)").set_value(True).run()
