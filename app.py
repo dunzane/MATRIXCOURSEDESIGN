@@ -73,7 +73,7 @@ st.markdown(f"""
         max-width: 95%;
     }}
     [data-testid="stAppViewContainer"] > .main {{ padding-top: 0 !important; }}
-    [data-testid="stHeader"] {{ height: 2rem; min-height: 2rem; background: transparent; }}
+    [data-testid="stHeader"] {{ height: 0 !important; min-height: 0 !important; background: transparent; }}
     [data-testid="stToolbar"] {{ display: none; }}
     [data-testid="stSidebar"], [data-testid="collapsedControl"] {{ display: none !important; }}
     [data-testid="stAppViewContainer"],
@@ -91,9 +91,9 @@ st.markdown(f"""
     }}
     h1 {{
         padding-top: 0 !important;
-        margin-top: 0.1rem !important;
-        margin-bottom: 0 !important;
-        line-height: 1.15;
+        margin-top: -0.55rem !important;
+        margin-bottom: -0.12rem !important;
+        line-height: 1.08;
     }}
     h1 + div {{ margin-top: 0 !important; }}
 
@@ -137,13 +137,13 @@ st.markdown(f"""
     [data-testid="stMetricLabel"] {{ justify-content: center; }}
 
     /* ---------- 顶部导航（分段控件） ---------- */
-    [class*="st-key-main_page_nav"] {{ margin-top: 0.4rem !important; margin-bottom: 0 !important; }}
+    [class*="st-key-main_page_nav"] {{ margin-top: 0.1rem !important; margin-bottom: 0 !important; }}
     [class*="st-key-main_page_nav"] [role="radiogroup"] {{
         display: grid !important;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 0.4rem;
         max-width: 620px;
-        margin: 0.35rem 0 0 0;
+        margin: 0.1rem 0 0 0;
         padding: 0.25rem;
         border: 1px solid {HAIRLINE};
         border-radius: 6px;
@@ -210,10 +210,10 @@ st.markdown(f"""
         border: 1px solid {HAIRLINE};
         border-radius: 6px;
         padding: 0.9rem;
-        max-height: calc(100vh - 7.5rem);
+        max-height: calc(100vh - 5.4rem);
         overflow-y: auto;
         position: sticky;
-        top: 0.75rem;
+        top: 0.15rem;
     }}
     [class*="st-key-workbench_panel"] h2,
     [class*="st-key-workbench_panel"] h3 {{ margin-top: 0 !important; }}
@@ -235,9 +235,9 @@ st.markdown(f"""
         font-size: 1.02rem; font-weight: 600; color: {INK};
     }}
     .step-sub {{ font-size: 0.75rem; color: {INK_SOFT}; margin-left: auto; }}
-    .panel-rule {{ border: 0; border-top: 1px solid {HAIRLINE}; margin: 0.9rem 0 0.7rem 0; }}
+    .panel-rule {{ border: 0; border-top: 1px solid {HAIRLINE}; margin: 0.65rem 0 0.55rem 0; }}
 
-    .page-nav-spacer {{ height: 0.5rem; }}
+    .page-nav-spacer {{ height: 0.15rem; }}
 
     /* Expander 标题 */
     .streamlit-expanderHeader, .streamlit-expanderHeader p {{
