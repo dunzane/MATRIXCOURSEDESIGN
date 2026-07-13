@@ -210,13 +210,18 @@ st.markdown(f"""
         border: 1px solid {HAIRLINE};
         border-radius: 6px;
         padding: 0.9rem;
-        max-height: calc(100vh - 5.4rem);
-        overflow-y: auto;
-        position: sticky;
-        top: 0.15rem;
     }}
     [class*="st-key-workbench_panel"] h2,
     [class*="st-key-workbench_panel"] h3 {{ margin-top: 0 !important; }}
+    [class*="st-key-style_model_select"] [data-baseweb="select"] > div {{
+        border: 1px solid {INK} !important;
+        border-radius: 4px !important;
+        background: {PAPER} !important;
+    }}
+    [class*="st-key-style_model_select"] [data-baseweb="select"]:focus-within > div {{
+        border-color: {INK} !important;
+        box-shadow: 0 0 0 1px {INK} !important;
+    }}
 
     /* 面板内的步骤标题 */
     .step-head {{
@@ -693,7 +698,7 @@ def render_workbench_panel(example_paths):
 
     # ---- 步骤 4 · 风格模型 ----
     step_head("4", "风格迁移", "计算耗时最长的一步")
-    style_opt = st.selectbox("选择动漫风格模型", list(STYLE_MAP.keys()))
+    style_opt = st.selectbox("选择动漫风格模型", list(STYLE_MAP.keys()), key="style_model_select")
 
     panel_rule()
     run_analysis = st.button("▶ 开始计算 / 更新结果", type="primary", use_container_width=True)
