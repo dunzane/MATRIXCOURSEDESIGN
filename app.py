@@ -104,9 +104,6 @@ st.markdown(f"""
         padding-bottom: 0.45rem;
         margin: 1.6rem 0 1rem 0;
     }}
-    .live-preview-head {{
-        margin-top: 0 !important;
-    }}
     .sec-num {{
         font-family: {SERIF};
         font-size: 1.5rem; color: {ACCENT};
@@ -145,8 +142,7 @@ st.markdown(f"""
         display: grid !important;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 0.4rem;
-        width: min(100%, 330px);
-        max-width: 330px;
+        max-width: 620px;
         margin: 0.1rem 0 0 0;
         padding: 0.25rem;
         border: 1px solid {HAIRLINE};
@@ -557,9 +553,9 @@ def color_caption(edit_hair, hair_params, edit_face, face_params):
     return "语义色彩：" + ("、".join(parts) if parts else "关闭")
 
 
-def section_head(num, title, note="", class_name=""):
+def section_head(num, title, note=""):
     st.markdown(
-        f"<div class='sec-head {class_name}'><span class='sec-num'>{num}</span>"
+        f"<div class='sec-head'><span class='sec-num'>{num}</span>"
         f"<span class='sec-title'>{html.escape(title)}</span>"
         f"<span class='sec-note'>{html.escape(note)}</span></div>",
         unsafe_allow_html=True,
@@ -878,7 +874,7 @@ with workbench_content_col:
     )
 
     # ---------- ① 实时预览（几何变换即时生效，无需推理） ----------
-    section_head("01", "输入 · 实时预览", "几何变换即时生效 · 色彩与风格需点击「开始计算」", "live-preview-head")
+    section_head("01", "输入 · 实时预览", "几何变换即时生效 · 色彩与风格需点击「开始计算」")
 
     if image_source.startswith("默认"):
         st.caption(f"ℹ️ 当前正在展示默认示例图片（{image_source}），可在左侧上传替换。")
