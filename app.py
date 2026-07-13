@@ -61,12 +61,25 @@ st.markdown("""
         padding-top: 0 !important;
     }
     [data-testid="stHeader"] {
-        height: 0;
-        min-height: 0;
+        height: 2.25rem;
+        min-height: 2.25rem;
         background: transparent;
     }
     [data-testid="stToolbar"] {
         display: none;
+    }
+    [data-testid="collapsedControl"] {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: fixed !important;
+        top: 0.55rem !important;
+        left: 0.55rem !important;
+        z-index: 10000 !important;
+        background: #F0EEE6 !important;
+        border: 1px solid #DAD5C8 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 8px rgba(61, 57, 41, 0.10);
     }
     [data-testid="stAppViewContainer"],
     [data-testid="stAppViewContainer"] > .main {
@@ -98,6 +111,44 @@ st.markdown("""
     [data-testid="stMetric"] { display: flex; flex-direction: column; align-items: center; text-align: center; }
     [data-testid="stMetricValue"] { justify-content: center; font-weight: bold; }
     [data-testid="stMetricLabel"] { justify-content: center; }
+    [class*="st-key-main_page_nav"] [role="radiogroup"] {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.75rem;
+        max-width: 720px;
+        margin: 0.75rem 0 0.25rem 0;
+    }
+    [class*="st-key-main_page_nav"] label {
+        min-height: 62px;
+        padding: 0.8rem 1rem !important;
+        border: 1px solid #DAD5C8 !important;
+        border-radius: 8px !important;
+        background: #F0EEE6 !important;
+        color: #3D3929 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center;
+        box-shadow: 0 1px 2px rgba(61, 57, 41, 0.06);
+    }
+    [class*="st-key-main_page_nav"] label:has(input:checked) {
+        border-color: #C15F3C !important;
+        background: #EFE9DD !important;
+        box-shadow: inset 0 0 0 1px #C15F3C;
+    }
+    [class*="st-key-main_page_nav"] label > div:first-child {
+        display: none !important;
+    }
+    [class*="st-key-main_page_nav"] label p {
+        font-weight: 700 !important;
+        margin: 0 !important;
+        color: #3D3929 !important;
+    }
+    @media (max-width: 720px) {
+        [class*="st-key-main_page_nav"] [role="radiogroup"] {
+            grid-template-columns: 1fr;
+        }
+    }
     div[data-testid="stAlert"] {
         background: #EFE9DD;
         color: #3D3929;
@@ -179,15 +230,21 @@ def require_password():
         }
         [class*="st-key-password_input"] input {
             background: #FAF9F5 !important;
-            border: 1px solid #C15F3C !important;
+            border: 0 !important;
+            outline: none !important;
             border-radius: 6px !important;
             padding-right: 0.75rem !important;
+            box-shadow: none !important;
         }
         [class*="st-key-password_input"] [data-baseweb="input"] {
             background: #FAF9F5 !important;
             border: 1px solid #C15F3C !important;
             border-radius: 6px !important;
             box-shadow: none !important;
+        }
+        [class*="st-key-password_input"] [data-baseweb="input"]:focus-within {
+            border-color: #A84F30 !important;
+            box-shadow: 0 0 0 2px rgba(193, 95, 60, 0.16) !important;
         }
         [class*="st-key-password_input"] [data-testid="InputInstructions"],
         [class*="st-key-password_input"] [data-testid="stTextInputInstructions"],
@@ -213,7 +270,7 @@ def require_password():
 
     _, password_col, _ = st.columns([1, 1, 1])
     with password_col:
-        with st.container(border=True, key="password_card"):
+        with st.container(border=False, key="password_card"):
             with st.container(key="password_logo"):
                 st.image("logo/icon.png", width=112, output_format="PNG")
             st.title("西电高等代数实验室")
