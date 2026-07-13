@@ -713,28 +713,102 @@ def render_workbench_panel(example_paths):
 
 def render_principle_page():
     st.header("📚 原理介绍")
-    st.caption("矩阵分析工作台中的线性代数基础")
+    st.caption("面向高等代数课程的项目知识梳理：从线性变换到张量风格迁移")
 
-    st.header("二维仿射变换")
-    st.markdown("旋转、缩放和平移可统一写为二维坐标的线性变换与平移组合：")
+    st.header("1. 图像、向量空间与张量表示")
+    st.markdown("""
+    在程序中，一张 RGB 图像被表示为三维数组；进入 PyTorch 后写成张量
+    $I\\in[0,1]^{3\\times H\\times W}$。每一个像素都可看作颜色空间中的向量
+    $x=(r,g,b)^T\\in\\mathbb{R}^3$，整张图像则是大量颜色向量按空间网格排列后的集合。
+
+    因此，本项目的“矩阵分析”可以分成两个层面：空间坐标上的线性/仿射变换，以及颜色向量上的通道变换与区域投影。
+    """)
+    st.latex(r"I=\{x_{ij}\mid x_{ij}\in\mathbb{R}^3,\;1\le i\le H,\;1\le j\le W\}")
+    st.latex(r"X\in\mathbb{R}^{3\times N},\qquad N=H\cdot W")
+
+    st.header("2. 二维仿射变换")
+    st.markdown("旋转、缩放和平移可统一写成线性变换与平移向量的组合。代码中的旋转角、缩放比例和 $x/y$ 平移共同确定这一映射：")
     st.latex(r"\begin{bmatrix}x'\\y'\end{bmatrix}=\begin{bmatrix}s\cos\theta&-s\sin\theta\\s\sin\theta&s\cos\theta\end{bmatrix}\begin{bmatrix}x\\y\end{bmatrix}+\begin{bmatrix}t_x\\t_y\end{bmatrix}")
     st.latex(r"A=\begin{bmatrix}s\cos\theta&-s\sin\theta&t_x\\s\sin\theta&s\cos\theta&t_y\end{bmatrix}")
+    st.markdown("""
+    这对应高等代数中的“线性变换 + 平移”。若只看 $2\\times2$ 部分，它保持了向量空间结构；
+    加上平移后不再是线性变换，但仍是仿射空间中的基本变换。
+    """)
 
-    st.header("单应性矩阵与透视投影")
-    st.markdown("使用齐次坐标后，平面透视关系可由一个 $3\\times3$ 单应性矩阵表示，最后用 $w'$ 归一化回二维坐标：")
+    st.header("3. 齐次坐标、单应性矩阵与透视投影")
+    st.markdown("""
+    透视变换无法用普通二维线性变换完全描述。项目中通过改变图像四个角点，构造平面到平面的投影关系。
+    在齐次坐标中，平移、仿射和透视都可放入一个 $3\\times3$ 矩阵框架。
+    """)
     st.latex(r"\begin{bmatrix}\tilde{x}\\\tilde{y}\\\tilde{w}\end{bmatrix}=H\begin{bmatrix}x\\y\\1\end{bmatrix},\quad H=\begin{bmatrix}h_{11}&h_{12}&h_{13}\\h_{21}&h_{22}&h_{23}\\h_{31}&h_{32}&h_{33}\end{bmatrix}")
     st.latex(r"x'=\frac{\tilde{x}}{\tilde{w}},\qquad y'=\frac{\tilde{y}}{\tilde{w}}")
+    st.markdown("这里的归一化步骤体现了射影几何中的等价类思想：$(x,y,w)$ 与 $\\lambda(x,y,w)$ 表示同一个平面点。")
 
-    st.header("四种镜面反射")
-    st.markdown("四种反射都可由二维线性变换矩阵表示：")
+    st.header("4. 反射矩阵、正交变换与变换复合")
+    st.markdown("""
+    工作台中的四种镜面反射都由 $2\\times2$ 矩阵描述。它们属于正交变换，保持长度与角度，但行列式为 $-1$，
+    会改变平面取向。代码中的几何顺序固定为：仿射变换 $\\rightarrow$ 透视投影 $\\rightarrow$ 反射。
+    """)
     st.latex(r"R_{x'=-x}=\begin{bmatrix}-1&0\\0&1\end{bmatrix},\quad R_{y'=-y}=\begin{bmatrix}1&0\\0&-1\end{bmatrix}")
     st.latex(r"R_{y=x}=\begin{bmatrix}0&1\\1&0\end{bmatrix},\quad R_{y=-x}=\begin{bmatrix}0&-1\\-1&0\end{bmatrix}")
+    st.latex(r"T_{\mathrm{total}}=R\circ P\circ A")
+    st.markdown("沿 $y=x$ 的反射在张量实现中对应交换图像的高、宽维度；沿 $y=-x$ 可理解为先转置，再做 $180^\\circ$ 旋转。")
 
-    st.header("语义掩膜与协方差对齐")
-    st.markdown("分割网络先生成语义掩膜 $M$，只让目标区域参与色彩变换。理论上的均值平移与协方差缩放可将原分布对齐到目标色彩分布：")
+    st.header("5. 语义分割 Mask：从子空间投影到区域选择")
+    st.markdown("""
+    BiSeNet 会给每个像素分配语义类别。项目中取头发类别、皮肤/鼻子类别生成二值或软化后的掩膜 $M$。
+    从矩阵角度看，$M$ 是一个对角选择矩阵：它让目标区域参与运算，让非目标区域保持原值。
+    """)
+    st.latex(r"M=\operatorname{diag}(m_1,m_2,\ldots,m_N),\qquad m_i\in[0,1]")
+    st.latex(r"X_{\mathrm{region}}=XM")
+    st.markdown("实际代码中，头发 mask 经过腐蚀与高斯模糊得到软边界，避免硬切割；面部区域则进一步生成双颊高斯权重。")
+
+    st.header("6. HSV 颜色空间与通道矩阵编辑")
+    st.markdown("""
+    颜色编辑没有直接在 RGB 三个通道上完成，而是先变换到 HSV 表示：
+    $H$ 表示色相，$S$ 表示饱和度，$V$ 表示明度。这样更接近“调色”的语义。
+
+    头发编辑中，项目将目标区域的色相锁定到所选颜色，同时提升饱和度、压缩并提亮明度；
+    面部编辑中，项目用高斯 mask 提升饱和度并轻微降低明度，从而产生腮红效果。
+    """)
+    st.latex(r"(H,S,V)=\Phi_{\mathrm{HSV}}(R,G,B)")
+    st.latex(r"H'=\alpha_H H_t+(1-\alpha_H)H,\qquad S'=\operatorname{clip}(S+\Delta_S),\qquad V'=\operatorname{clip}(aV+b)")
+    st.latex(r"I'=(1-M)\odot I+M\odot \Phi_{\mathrm{RGB}}(H',S',V')")
+
+    st.header("7. 高斯核、卷积与软化边界")
+    st.markdown("""
+    头发边缘和面部腮红都用到了“软权重”。高斯核可看作一个归一化权重向量，二维模糊由水平、垂直两个一维卷积复合完成。
+    这对应矩阵乘法中的线性平滑算子。
+    """)
+    st.latex(r"g_i=\frac{\exp\left(-\frac{i^2}{2\sigma^2}\right)}{\sum_j\exp\left(-\frac{j^2}{2\sigma^2}\right)}")
+    st.latex(r"M_{\mathrm{soft}}=G_yG_xM")
+    st.markdown("面部腮红的双颊区域根据 face mask 的质心确定，左右脸颊可看作两个二维高斯函数的最大值叠加：")
+    st.latex(r"C(x,y)=\max\left(e^{-\frac{(x-c_x+d)^2+(y-c_y)^2}{2\sigma^2}},\,e^{-\frac{(x-c_x-d)^2+(y-c_y)^2}{2\sigma^2}}\right)M_{\mathrm{face}}")
+
+    st.header("8. 均值、方差与协方差对齐思想")
+    st.markdown("结果区的矩阵数值分析展示 mask 和通道响应，并统计平均值、方差、峰值。理论上，颜色分布也可用均值和协方差描述：")
     st.latex(r"\mu=\frac{\sum_i M_i x_i}{\sum_i M_i},\qquad \Sigma=\frac{\sum_i M_i(x_i-\mu)(x_i-\mu)^T}{\sum_i M_i}")
     st.latex(r"x'_i=\mu_t+\Sigma_t^{1/2}\Sigma_s^{-1/2}(x_i-\mu_s),\qquad I'=(1-M)\odot I+M\odot X'")
-    st.info("当前 apply_matrix_color_edit 在 HSV 通道上用增益、偏移和软掩膜融合实现这一分布调整思想的轻量近似，并由强度参数控制融合程度。")
+    st.markdown("""
+    当前 `apply_matrix_color_edit` 使用 HSV 通道上的增益、偏移和软掩膜融合来近似这种分布调整思想。
+    “强度”参数本质上是在控制目标变换与原图之间的插值权重。
+    """)
+
+    st.header("9. 风格迁移网络与矩阵运算的连接")
+    st.markdown("""
+    AnimeGAN 接收经过语义矩阵编辑和几何变换后的图像张量。神经网络可以理解为多层线性变换与非线性激活的复合：
+    卷积层提取局部结构，归一化层调整特征分布，生成器最终输出风格化图像。
+    """)
+    st.latex(r"F_{\theta}(X)=L_k\circ\sigma\circ L_{k-1}\circ\cdots\circ\sigma\circ L_1(X)")
+    st.markdown("其中每个 $L_i$ 都可视为参数矩阵或卷积线性算子，$\\sigma$ 是非线性激活。")
+
+    st.header("10. 参数快照与新旧结果对比")
+    st.markdown("""
+    每次点击“开始计算 / 更新结果”后，系统保存本次输入、矩阵编辑结果、最终输出和参数字典。
+    新旧结果对比相当于比较两个参数向量：
+    """)
+    st.latex(r"p=(p_1,p_2,\ldots,p_n),\qquad \Delta p=p^{(new)}-p^{(old)}")
+    st.markdown("页面只高亮变化最明显的 1 到 2 个参数，帮助学生观察“矩阵参数变化 $\\rightarrow$ 图像结果变化”的对应关系。")
 
 
 def render_manual_page():
