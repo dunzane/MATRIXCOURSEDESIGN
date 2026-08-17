@@ -813,7 +813,7 @@ def render_principle_page():
 
 def render_manual_page():
     st.header("📖 使用说明")
-    st.caption("矩阵分析工作台操作流程")
+    st.caption("实验操作流程")
 
     st.header("图片输入")
     st.markdown("""
@@ -851,7 +851,7 @@ def render_manual_page():
 
 def render_app_header():
     st.title("西电高代与矩阵实验室")
-    st.caption("矩阵分析工作台 · 基于协方差对齐与张量变形的语义风格迁移系统")
+    st.caption("实验名称 · 基于协方差对齐与张量变形的语义风格迁移系统")
 
     torch_ver = torch.__version__
     st.markdown(f"""
