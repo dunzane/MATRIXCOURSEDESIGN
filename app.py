@@ -581,7 +581,7 @@ def panel_rule():
 
 def render_workbench_panel(example_paths):
     st.markdown(
-        f"<h3 style='font-family:{SERIF}; margin-bottom:0.2rem;'>矩阵工作台面</h3>",
+        f"<h3 style='font-family:{SERIF}; margin-bottom:0.2rem;'>实验模块</h3>",
         unsafe_allow_html=True,
     )
     st.caption("从上到下依次完成 4 个步骤，最后点击「开始计算」。")
@@ -850,7 +850,7 @@ def render_manual_page():
 # ==========================================
 
 def render_app_header():
-    st.title("西电高等代数实验室")
+    st.title("西电高代与矩阵实验室")
     st.caption("矩阵分析工作台 · 基于协方差对齐与张量变形的语义风格迁移系统")
 
     torch_ver = torch.__version__
@@ -870,7 +870,7 @@ def render_app_header():
 render_app_header()
 
 page_navigation = {
-    "🎨 矩阵工作台": "workbench",
+    "🎨 实验模块": "workbench",
     "📚 原理介绍": "principle",
     "📖 使用说明": "manual",
 }
