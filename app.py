@@ -56,7 +56,7 @@ from matrix import apply_matrix_color_edit, get_segmentation_mask
 # ==========================================
 
 st.set_page_config(
-    page_title="西电高等代数实验室",
+    page_title="西电高代与矩阵实验室",
     page_icon="🎨",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -114,7 +114,7 @@ st.markdown(f"""
         font-family: {SERIF};
         font-size: 1.25rem; font-weight: 600; color: {INK};
         line-height: 1;
-    }}
+    }}streamlit.app/
     .sec-note {{ font-size: 0.82rem; color: {INK_SOFT}; margin-left: auto; }}
 
     /* ---------- 面板与卡片：描边不填充 ---------- */
@@ -345,8 +345,8 @@ def require_password():
         with st.container(border=False, key="password_card"):
             with st.container(key="password_logo"):
                 st.image("logo/icon.png", width=112, output_format="PNG")
-            st.title("西电高等代数实验室")
-            st.caption("矩阵分析工作台 · 请输入访问密码后继续")
+            st.title("西电高代与矩阵实验室")
+            st.caption("西电高代与矩阵工作台 · 请输入访问密码后继续")
             password = st.text_input("密码", type="password", key="password_input")
             submitted = st.button("进入实验室", key="password_submit", type="primary", use_container_width=True)
 
